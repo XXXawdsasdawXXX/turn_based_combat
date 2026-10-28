@@ -1,4 +1,4 @@
-namespace Game
+namespace Game.Stats
 {
     public enum EStatType
     {

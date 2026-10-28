@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Game
+namespace Game.Configurations
 {
     [CreateAssetMenu(fileName = "TeamConfiguration", menuName = "Game/TeamConfiguration")]
     public class TeamsConfiguration : ScriptableObject

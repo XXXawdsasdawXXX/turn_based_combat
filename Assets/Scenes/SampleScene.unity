@@ -394,6 +394,7 @@ MonoBehaviour:
   autoRun: 1
   autoInjectGameObjects: []
   _teamsConfiguration: {fileID: 11400000, guid: 74322830f7d6d945fb500a7e7c381520, type: 2}
+  _assetStorage: {fileID: 11400000, guid: eb6115363f0db11d89cd2eb815b7a97c, type: 2}
 --- !u!4 &1154781625
 Transform:
   m_ObjectHideFlags: 0
