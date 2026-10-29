@@ -13,13 +13,29 @@ MonoBehaviour:
   m_Name: CharacterConfiguration_5
   m_EditorClassIdentifier: Game::Game.CharacterConfiguration
   <Name>k__BackingField: 5
+  Color: {r: 0.5906635, g: 0.24451506, b: 0.21340632, a: 1}
   <Stats>k__BackingField:
   - <Type>k__BackingField: 1
-    <Value>k__BackingField: 10
+    <BaseValue>k__BackingField: 10
   - <Type>k__BackingField: 2
-    <Value>k__BackingField: 1
+    <BaseValue>k__BackingField: 5
   - <Type>k__BackingField: 3
-    <Value>k__BackingField: 0.7
+    <BaseValue>k__BackingField: 1
   - <Type>k__BackingField: 4
-    <Value>k__BackingField: 2
-  Color: {r: 0.5906635, g: 0.24451506, b: 0.21340632, a: 1}
+    <BaseValue>k__BackingField: 0.22995889
+  <Abilities>k__BackingField:
+  - <Name>k__BackingField: melee attack
+    <Type>k__BackingField: 0
+    <EffectValue>k__BackingField:
+      <Type>k__BackingField: 1
+      <BaseValue>k__BackingField: -1
+  - <Name>k__BackingField: range attack
+    <Type>k__BackingField: 1
+    <EffectValue>k__BackingField:
+      <Type>k__BackingField: 1
+      <BaseValue>k__BackingField: -1
+  - <Name>k__BackingField: heal
+    <Type>k__BackingField: 2
+    <EffectValue>k__BackingField:
+      <Type>k__BackingField: 1
+      <BaseValue>k__BackingField: 1

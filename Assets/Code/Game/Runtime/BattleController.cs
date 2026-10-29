@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using Cysharp.Threading.Tasks;
+using Game.Abilities;
 using Game.Character;
 using Game.Configurations;
 using UnityEngine;
@@ -9,42 +12,48 @@ namespace Game.Runtime
 {
     public class BattleController : IStartable
     {
-        private const float Y = -1;
-        private const float StartX = 8;
-        private const float CharacterDistance = 2;
-
+        public BattleState State { get; } = new();
+        
         private readonly ICharacterFactory _characterFactory;
         private readonly TeamsConfiguration _teamsConfiguration;
 
-        // Index 0 = frontline (closest to the enemy). Bodies do not move; only who counts as front changes.
-        private readonly List<CharacterActor> _left = new();
-        private readonly List<CharacterActor> _right = new();
+        private readonly ActionRunner _actionRunner;
+        private TurnQueue _queue;
 
         
         public BattleController(ICharacterFactory characterFactory, TeamsConfiguration teamsConfiguration)
         {
             _characterFactory = characterFactory;
             _teamsConfiguration = teamsConfiguration;
+            _actionRunner = new ActionRunner();
         }
         
         public void Start()
         {
-            _createTeam(ETeamId.Left, _teamsConfiguration.TeamLeft, _left);
-            _createTeam(ETeamId.Right, _teamsConfiguration.TeamRight, _right);      
+            _createTeam(ETeamId.Player, _teamsConfiguration.Player, State.PlayerTeam);
+            _createTeam(ETeamId.Enemy, _teamsConfiguration.Enemy, State.EnemyTeam);
+          
+            _queue = new TurnQueue(State.PlayerTeam, State.EnemyTeam);
+            
+            _startRound().Forget();
         }
         
         private void _createTeam(
             ETeamId team, 
             IReadOnlyList<CharacterConfiguration> configurations, 
-            ICollection<CharacterActor> actors)
-        {
+            List<CharacterActor> actors)
+        {   
+             const float Y = -1;
+             const float StartX = 8;
+             const float CharacterDistance = 2;
+            
             if (configurations == null || configurations.Count == 0)
             {
                 throw new Exception($"configurations from team {team} is empty");
             }
 
             // Slot 0 at front line (near center), higher slots go outward. No Reverse — list[i].Slot == i.
-            float outward = team is ETeamId.Left ? -1f : 1f;
+            float outward = team is ETeamId.Player ? -1f : 1f;
             float frontX = outward * (StartX - (configurations.Count - 1) * CharacterDistance);
 
             for (int slot = 0; slot < configurations.Count; slot++)
@@ -61,6 +70,50 @@ namespace Game.Runtime
                 actors.Add(actor);
                 actor.WorldView.SetPosition(new Vector3(x, Y, 0), team);
             }
-        } 
+        }
+
+        private async UniTask _startRound()
+        {
+            _queue.CreateRoundQueue();
+            
+            while (true)
+            {
+                if (_queue.TryGetNextActor(out CharacterActor actor))
+                {
+                    State.SetCurrentActor(actor);
+                    actor.WorldView.ChangeTurnView(true);
+
+                    if (actor.State.Team is ETeamId.Enemy)
+                    {
+                        CharacterActor target = State.PlayerTeam.FirstOrDefault(a => a.State.IsAlive());
+                  
+                        target.WorldView.ChangeTargetView(true);
+                        await _actionRunner.StartAction(
+                            actor,
+                            new List<CharacterActor>() { target },
+                            actor.Configuration.Abilities.FirstOrDefault(
+                                a => a.Type == EAbilityType.MeleeAttack));
+                        
+                        target.WorldView.ChangeTargetView(false);
+                    }
+                    
+                    actor.WorldView.ChangeTurnView(false);
+                    
+                    State.ResetCurrentActor();
+
+                    if (State.BattleEnd(out ETeamId winner))
+                    {
+                        Debug.Log($"team is won {winner}");
+                        break;
+                    }
+                }
+                else
+                {
+                    break;
+                }
+            }
+            
+            State.MoveToNextRound();
+        }
     }
 }

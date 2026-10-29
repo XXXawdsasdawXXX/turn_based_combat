@@ -1,30 +1,22 @@
-using System.Collections.Generic;
 using Game.Configurations;
-using Game.Stats;
 
 namespace Game.Character
 {
     public class CharacterActor
     {
         public CharacterWorldView WorldView { get; }
-        public List<RuntimeStat> Stats { get; }
-        public ETeamId Team { get; }
-        public int Slot { get; }
+        public CharacterState State { get; }
+        public CharacterConfiguration Configuration { get; }
         
         
-        public CharacterActor(CharacterConfiguration configuration, CharacterWorldView worldView, ETeamId team, int slot)
+        public CharacterActor(CharacterConfiguration configuration, CharacterWorldView worldView, CharacterState state)
         {
-            Team = team;
-            Slot = slot;
-            
+            Configuration = configuration;
+                
             WorldView = worldView;
             WorldView.SetBodyColor(configuration.Color);
-            
-            Stats = new List<RuntimeStat>();
-            foreach (Stat stat in configuration.Stats)
-            {
-                Stats.Add(new RuntimeStat(stat.Type, stat.Value));   
-            }
+
+            State = state;
         }
     }
 }

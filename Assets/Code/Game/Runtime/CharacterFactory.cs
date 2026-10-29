@@ -1,8 +1,9 @@
 using System;
+using Game.Character;
 using Game.Configurations;
 using Object = UnityEngine.Object;
 
-namespace Game.Character
+namespace Game.Runtime
 {
     public interface ICharacterFactory
     {
@@ -26,8 +27,16 @@ namespace Game.Character
             }
             
             CharacterWorldView view = Object.Instantiate(_assetStorage.CharacterWorldView);
-            
-            CharacterActor actor = new(configuration, view, team, slot);
+            CharacterState state = new(configuration, team, slot); 
+            CharacterActor actor = new(configuration, view, state);
+
+#if UNITY_EDITOR
+            view.SetGizmoModel(new CharacterWorldView.CharacterGizmoModel
+            {
+                Name = configuration.Name,
+                Slot = slot
+            });
+#endif
             
             return actor;
         }
