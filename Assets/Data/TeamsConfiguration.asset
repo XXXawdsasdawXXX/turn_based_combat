@@ -12,12 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 20aa9d8d886b4c2ca2c8f0b149e220ec, type: 3}
   m_Name: TeamsConfiguration
   m_EditorClassIdentifier: Game::Game.CharactersConfiguration
-  <TeamLeft>k__BackingField:
+  <Player>k__BackingField:
   - {fileID: 11400000, guid: e3807e487597adb108edce56d80b4c6a, type: 2}
   - {fileID: 11400000, guid: 33a2fe07f68b2cf51a711cfedfb64d0f, type: 2}
   - {fileID: 11400000, guid: 741f4c6f961350c978af5f5f5339734e, type: 2}
   - {fileID: 11400000, guid: a5b5baede4f5ca81abacc16e1e5ded06, type: 2}
-  <TeamRight>k__BackingField:
+  <Enemy>k__BackingField:
   - {fileID: 11400000, guid: ff5c30e84101f9f83bfa833de2e2cc29, type: 2}
   - {fileID: 11400000, guid: d873de6b427525ba4a665162f97303f3, type: 2}
   - {fileID: 11400000, guid: 4fc56d72e53975ed2a439eb9492535fe, type: 2}
