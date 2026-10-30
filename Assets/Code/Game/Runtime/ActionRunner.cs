@@ -17,9 +17,9 @@ namespace Game.Runtime
             
             foreach (CharacterActor target in targets)
             {
-                if (target.State.Stats.ContainsKey(ability.EffectValue.Type))
+                if (target.State.Stats.ContainsKey(ability.Effect.Type))
                 {
-                    target.State.Stats[ability.EffectValue.Type].Current.Value += ability.EffectValue.BaseValue;
+                    target.State.Stats[ability.Effect.Type].Current.Value += ability.Effect.BaseValue;
 
                     if (ability.IsAttacking())
                     {

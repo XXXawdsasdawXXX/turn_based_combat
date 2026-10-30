@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using Game.Abilities;
 using Game.Character;
 using R3;
 
@@ -7,20 +8,17 @@ namespace Game.Runtime
 {
     public class BattleState
     {
+        public ReactiveProperty<EBattlePhase> Phase { get; } = new(EBattlePhase.NotStarted);
+        public List<CharacterActor> PlayerTeam { get; } = new();
+        public List<CharacterActor> EnemyTeam { get; } = new();
         public ReactiveProperty<int> Round { get; } = new(0);
-        public ReactiveProperty<CharacterActor> CurrentActor { get; } = new(null);
+        public ReactiveProperty<CharacterActor> TurnActor { get; } = new(null);
+        public ReactiveProperty<CharacterActor> TurnTarget { get; } = new(null);
         
-        public readonly List<CharacterActor> PlayerTeam = new();
-        public readonly List<CharacterActor> EnemyTeam = new();
-       
+        public ReactiveProperty<Ability> TurnAbility { get; } = new(null);
         
-        public void SetCurrentActor(CharacterActor actor) => CurrentActor.Value = actor;
-       
-        public void ResetCurrentActor() => CurrentActor.Value = null;
-       
-        public void MoveToNextRound() => Round.Value++;
-        
-        public bool BattleEnd(out ETeamId winner)
+
+        public bool IsBattleEnd(out ETeamId winner)
         {
             bool teamHasAliveActor(ETeamId team)
             {
@@ -43,6 +41,13 @@ namespace Game.Runtime
             }
 
             return false;
+        }
+
+        public void ResetTurn()
+        {
+            TurnActor.Value = null;
+            TurnTarget.Value = null;
+            TurnAbility.Value = null;
         }
     }
 }

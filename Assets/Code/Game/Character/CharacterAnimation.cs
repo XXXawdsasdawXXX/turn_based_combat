@@ -3,6 +3,7 @@ using Cysharp.Threading.Tasks;
 using DG.Tweening;
 using UnityEngine;
 
+#pragma warning disable CS4014
 namespace Game.Character
 {
     [Serializable]
@@ -33,7 +34,7 @@ namespace Game.Character
                 .SetEase(Ease.Linear)
                 .SetLoops(-1, LoopType.Yoyo);
             
-            _sequence.Play();
+            _sequence.ToUniTask();
         }
 
         public async UniTask PlayDie()
@@ -43,11 +44,10 @@ namespace Game.Character
             
             foreach (SpriteRenderer renderer in _renderers)
             {
-                await _sequence.Join(renderer.DOFade(0.3f, 1));
+                Tween fade = renderer.DOFade(0.3f, 1f);
+                _sequence.Join(fade);
             }
             
-            _sequence.Play();
-
             await _sequence.ToUniTask();
         }
 
@@ -56,10 +56,10 @@ namespace Game.Character
             _sequence?.Kill();
             _sequence = DOTween.Sequence();
 
-            await _sequence.Append(_body.DOLocalMoveY(0.5f, 0.5f)).SetLoops(2, LoopType.Yoyo);
+            Tween fade = _body.DOLocalMoveY(0.5f, 0.5f).SetLoops(2, LoopType.Yoyo);
             
-            _sequence.Play();
-            
+            _sequence.Append(fade);
+
             await _sequence.ToUniTask();
         }
 
@@ -70,8 +70,6 @@ namespace Game.Character
             
             await _sequence.Append(_body.DOShakeRotation(1, 30));
 
-            _sequence.Play();
-
             await _sequence.ToUniTask();
         }
 
@@ -81,3 +79,4 @@ namespace Game.Character
         }
     }
 }
+#pragma warning restore CS4014

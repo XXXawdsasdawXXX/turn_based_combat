@@ -10,43 +10,55 @@ using VContainer.Unity;
 
 namespace Game.Runtime
 {
-    public class BattleController : IStartable
+    public interface IBattleController
+    {
+        BattleState State { get; }
+    }
+
+    public class BattleController : IBattleController, IStartable
     {
         public BattleState State { get; } = new();
-        
+
         private readonly ICharacterFactory _characterFactory;
         private readonly TeamsConfiguration _teamsConfiguration;
 
         private readonly ActionRunner _actionRunner;
         private TurnQueue _queue;
 
-        
         public BattleController(ICharacterFactory characterFactory, TeamsConfiguration teamsConfiguration)
         {
             _characterFactory = characterFactory;
             _teamsConfiguration = teamsConfiguration;
             _actionRunner = new ActionRunner();
         }
-        
-        public void Start()
+
+        public async void Start()
         {
+            await UniTask.Delay(1);
+            _startBattle();
+        }
+
+        public void _startBattle()
+        {
+            State.Phase.Value = EBattlePhase.Initialize;
+
             _createTeam(ETeamId.Player, _teamsConfiguration.Player, State.PlayerTeam);
             _createTeam(ETeamId.Enemy, _teamsConfiguration.Enemy, State.EnemyTeam);
-          
+
             _queue = new TurnQueue(State.PlayerTeam, State.EnemyTeam);
-            
+
+            State.Phase.Value = EBattlePhase.Start;
+
             _startRound().Forget();
         }
-        
-        private void _createTeam(
-            ETeamId team, 
-            IReadOnlyList<CharacterConfiguration> configurations, 
+
+        private void _createTeam(ETeamId team, IReadOnlyList<CharacterConfiguration> configurations,
             List<CharacterActor> actors)
-        {   
-             const float Y = -1;
-             const float StartX = 8;
-             const float CharacterDistance = 2;
-            
+        {
+            const float Y = -1;
+            const float StartX = 8;
+            const float CharacterDistance = 2;
+
             if (configurations == null || configurations.Count == 0)
             {
                 throw new Exception($"configurations from team {team} is empty");
@@ -74,36 +86,52 @@ namespace Game.Runtime
 
         private async UniTask _startRound()
         {
+            State.Round.Value++;
+            State.Phase.Value = EBattlePhase.StartRound;
+
             _queue.CreateRoundQueue();
-            
+
             while (true)
             {
                 if (_queue.TryGetNextActor(out CharacterActor actor))
                 {
-                    State.SetCurrentActor(actor);
+                    State.TurnActor.Value = actor;
+                    actor.State.IsTurn.Value = true;
                     actor.WorldView.ChangeTurnView(true);
 
                     if (actor.State.Team is ETeamId.Enemy)
                     {
-                        CharacterActor target = State.PlayerTeam.FirstOrDefault(a => a.State.IsAlive());
-                  
+                        State.Phase.Value = EBattlePhase.EnemyTurn;
+                        State.TurnTarget.Value = State.PlayerTeam.FirstOrDefault(a => a.State.IsAlive());
+                    }
+                    else
+                    {
+                        State.Phase.Value = EBattlePhase.PlayerTurn;
+                        State.TurnTarget.Value = State.EnemyTeam.FirstOrDefault(a => a.State.IsAlive());
+                    }
+
+                    CharacterActor target = State.TurnTarget.Value;
+                    if (target != null)
+                    {
                         target.WorldView.ChangeTargetView(true);
-                        await _actionRunner.StartAction(
-                            actor,
-                            new List<CharacterActor>() { target },
-                            actor.Configuration.Abilities.FirstOrDefault(
-                                a => a.Type == EAbilityType.MeleeAttack));
-                        
+
+                        await _actionRunner.StartAction(actor, new List<CharacterActor>() { target },
+                            actor.Configuration.Abilities.FirstOrDefault(a => a.Type == EAbilityType.MeleeAttack));
+
                         target.WorldView.ChangeTargetView(false);
                     }
                     
+                    actor.State.IsTurn.Value = false;
                     actor.WorldView.ChangeTurnView(false);
-                    
-                    State.ResetCurrentActor();
 
-                    if (State.BattleEnd(out ETeamId winner))
+                    State.ResetTurn();
+
+                    if (State.IsBattleEnd(out ETeamId winner))
                     {
                         Debug.Log($"team is won {winner}");
+
+                        State.Phase.Value = EBattlePhase.End;
+
                         break;
                     }
                 }
@@ -112,8 +140,6 @@ namespace Game.Runtime
                     break;
                 }
             }
-            
-            State.MoveToNextRound();
         }
     }
 }

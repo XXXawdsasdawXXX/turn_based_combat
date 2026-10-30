@@ -1,4 +1,3 @@
-using System;
 using UnityEngine;
 
 #if UNITY_EDITOR
@@ -18,6 +17,7 @@ namespace Game.Character
         [SerializeField] private GameObject _turnMarker;
         [SerializeField] private GameObject _targetMarker;
 
+        
         private void OnEnable()
         {
             Animation.PlayIdle();
