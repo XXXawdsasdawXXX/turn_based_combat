@@ -14,7 +14,7 @@ namespace Code.UI
         
         public void Enable()
         {
-            gameObject.SetActive(false);            
+            gameObject.SetActive(true);            
         }
 
         public void SetAbility(Ability ability)
@@ -39,7 +39,7 @@ namespace Code.UI
 
         public void Disable()
         {
-            gameObject.SetActive(true);            
+            gameObject.SetActive(false);            
         }
     }
 }

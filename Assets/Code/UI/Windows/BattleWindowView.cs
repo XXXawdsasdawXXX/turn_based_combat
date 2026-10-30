@@ -1,9 +1,10 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace Code.UI
 {
-    public class HudWindowView : UIWindowView
+    public class BattleWindowView : UIWindowView
     {
         [field: SerializeField] public TeamView PlayerTeam { get; private set; }
         [field: SerializeField] public TeamView EnemyTeam { get; private set; }
@@ -13,6 +14,13 @@ namespace Code.UI
         public void UpdateRoundNumber(int round)
         {
             TextRound.SetText($"round: {round}");
+        }
+
+        public override void Open()
+        {
+            base.Open();
+            
+            LayoutRebuilder.ForceRebuildLayoutImmediate(rect);
         }
     }
 }

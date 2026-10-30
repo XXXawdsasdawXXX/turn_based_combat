@@ -15,8 +15,7 @@ namespace Code.UI
         } 
         
         [SerializeField] private MonoPool<UICharacterView> _pool;
-
-        private int _selectedSlot = -1;
+        
         
         public void SetTeam(List<CharacterActor> actors, bool rightToLeft = false)
         {

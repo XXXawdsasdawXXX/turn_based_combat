@@ -2,17 +2,17 @@ using System;
 using System.Collections.Generic;
 using Game.Runtime;
 using R3;
-using UnityEngine;
+
 
 namespace Code.UI
 {
-    public class HudWindowController : UIWindowController<HudWindowView>
+    public class BattleWindowController : UIWindowController<BattleWindowView>
     {
         private readonly IBattleController _battleController;
         private readonly List<IDisposable> _subscription = new();
 
         
-        public HudWindowController(HudWindowView view, IBattleController battleController) : base(view)
+        public BattleWindowController(BattleWindowView view, IBattleController battleController) : base(view)
         {
             _battleController = battleController;
         }
@@ -20,12 +20,17 @@ namespace Code.UI
         protected override void onSubscribe()
         {
             BattleState state = _battleController.State;
+            
+            view.ActiveActor.SubscribeToBattleState(_battleController.State);
+       
             _subscription.Add(state.Phase.DistinctUntilChanged().Subscribe(_onPhaseChanged));
-            _subscription.Add(state.Round.Distinct().Subscribe(view.UpdateRoundNumber));
+            _subscription.Add(state.Round.DistinctUntilChanged().Subscribe(view.UpdateRoundNumber));
         }
 
         protected override void onDispose()
         {
+            view.ActiveActor.DisposeBattleSubscription();
+            
             foreach (IDisposable disposable in _subscription)
             {
                 disposable?.Dispose();
@@ -36,13 +41,14 @@ namespace Code.UI
         
         private void _onPhaseChanged(EBattlePhase phase)
         {
-            var state = _battleController.State;
-            
-            Debug.Log($"on phase changed  {phase}");
+            BattleState state = _battleController.State;
+
             switch (phase)
             {
                 default:
                 case EBattlePhase.NotStarted:
+                    break;
+                case EBattlePhase.Initialize:
                     break;
                 case EBattlePhase.Start:
                     view.PlayerTeam.SetTeam(state.PlayerTeam, rightToLeft: true);
@@ -51,7 +57,6 @@ namespace Code.UI
                 case EBattlePhase.StartRound:
                     break;
                 case EBattlePhase.PlayerTurn:
-                    break;
                 case EBattlePhase.EnemyTurn:
                     break;
                 case EBattlePhase.EndRound:
@@ -61,8 +66,6 @@ namespace Code.UI
                 case EBattlePhase.Pause:
                     break;
             }
-            
-            view.ActiveActor.SetInteractable(phase is EBattlePhase.PlayerTurn);
         }
     }
 }

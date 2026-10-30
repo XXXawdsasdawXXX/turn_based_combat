@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
 using Game.Abilities;
 using Game.Character;
@@ -13,6 +15,8 @@ namespace Game.Runtime
     public interface IBattleController
     {
         BattleState State { get; }
+
+        public void StartBattle();
     }
 
     public class BattleController : IBattleController, IStartable
@@ -24,7 +28,9 @@ namespace Game.Runtime
 
         private readonly ActionRunner _actionRunner;
         private TurnQueue _queue;
+        private CancellationTokenSource _cts;
 
+        
         public BattleController(ICharacterFactory characterFactory, TeamsConfiguration teamsConfiguration)
         {
             _characterFactory = characterFactory;
@@ -34,12 +40,18 @@ namespace Game.Runtime
 
         public async void Start()
         {
-            await UniTask.Delay(1);
-            _startBattle();
+            await UniTask.Delay(1); //todo ui не успевает подписаться на state
+
+            _cts = new CancellationTokenSource();
         }
 
-        public void _startBattle()
+        public void StartBattle()
         {
+            if (State.Phase.Value is not EBattlePhase.NotStarted)
+            {
+                return;
+            }
+            
             State.Phase.Value = EBattlePhase.Initialize;
 
             _createTeam(ETeamId.Player, _teamsConfiguration.Player, State.PlayerTeam);
@@ -49,11 +61,103 @@ namespace Game.Runtime
 
             State.Phase.Value = EBattlePhase.Start;
 
-            _startRound().Forget();
+            _runBattle(_cts.Token).Forget();
+        }
+        
+        private async UniTask _runBattle(CancellationToken token)
+        {
+            try
+            {
+                while (!token.IsCancellationRequested)
+                {
+                    await _runRound(token);
+
+                    if (State.Phase.Value is EBattlePhase.End)
+                    {
+                        break;
+                    }
+
+                    State.Phase.Value = EBattlePhase.EndRound;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // restart/exit later
+            }
         }
 
-        private void _createTeam(ETeamId team, IReadOnlyList<CharacterConfiguration> configurations,
-            List<CharacterActor> actors)
+        private async UniTask _runRound(CancellationToken token)
+        {
+            State.Round.Value++;
+            State.Phase.Value = EBattlePhase.StartRound;
+
+            _queue.CreateRoundQueue();
+
+            while (!token.IsCancellationRequested)
+            {
+                if (_queue.TryGetNextActor(out CharacterActor actor))
+                {
+                    await _runTurn(actor, token);
+                    
+                    if (State.IsBattleEnd(out ETeamId winner))
+                    {
+                        Debug.Log($"team is won {winner}");
+
+                        State.Phase.Value = EBattlePhase.End;
+
+                        break;
+                    }
+                }
+                else
+                {
+                    break;
+                }
+            }
+            
+            State.Phase.Value = EBattlePhase.EndRound;
+        }
+
+        private async Task _runTurn(CharacterActor actor, CancellationToken token)
+        {
+            State.TurnActor.Value = actor;
+            actor.State.IsTurn.Value = true;
+            actor.WorldView.ChangeTurnView(true);
+
+            if (actor.State.Team is ETeamId.Enemy)
+            {
+                State.Phase.Value = EBattlePhase.EnemyTurn;
+                State.TurnTarget.Value = State.PlayerTeam.FirstOrDefault(a => a.State.IsAlive());
+            }
+            else
+            {
+                State.Phase.Value = EBattlePhase.PlayerTurn;
+                State.TurnTarget.Value = State.EnemyTeam.FirstOrDefault(a => a.State.IsAlive());
+            }
+
+            CharacterActor target = State.TurnTarget.Value;
+            if (target != null)
+            {
+                target.WorldView.ChangeTargetView(true);
+
+                await _actionRunner.StartAction(
+                    actor, 
+                    new List<CharacterActor>() { target },
+                    actor.Configuration.Abilities.FirstOrDefault(a => a.Type == EAbilityType.MeleeAttack));
+
+                target.WorldView.ChangeTargetView(false);
+            }
+
+            actor.State.IsTurn.Value = false;
+            actor.WorldView.ChangeTurnView(false);
+
+            State.ResetTurn();
+        }
+
+
+        private void _createTeam(
+            ETeamId team, 
+            IReadOnlyList<CharacterConfiguration> configurations,
+            ICollection<CharacterActor> actors)
         {
             const float Y = -1;
             const float StartX = 8;
@@ -81,64 +185,6 @@ namespace Game.Runtime
                 CharacterActor actor = _characterFactory.Create(characterConfiguration, team, slot);
                 actors.Add(actor);
                 actor.WorldView.SetPosition(new Vector3(x, Y, 0), team);
-            }
-        }
-
-        private async UniTask _startRound()
-        {
-            State.Round.Value++;
-            State.Phase.Value = EBattlePhase.StartRound;
-
-            _queue.CreateRoundQueue();
-
-            while (true)
-            {
-                if (_queue.TryGetNextActor(out CharacterActor actor))
-                {
-                    State.TurnActor.Value = actor;
-                    actor.State.IsTurn.Value = true;
-                    actor.WorldView.ChangeTurnView(true);
-
-                    if (actor.State.Team is ETeamId.Enemy)
-                    {
-                        State.Phase.Value = EBattlePhase.EnemyTurn;
-                        State.TurnTarget.Value = State.PlayerTeam.FirstOrDefault(a => a.State.IsAlive());
-                    }
-                    else
-                    {
-                        State.Phase.Value = EBattlePhase.PlayerTurn;
-                        State.TurnTarget.Value = State.EnemyTeam.FirstOrDefault(a => a.State.IsAlive());
-                    }
-
-                    CharacterActor target = State.TurnTarget.Value;
-                    if (target != null)
-                    {
-                        target.WorldView.ChangeTargetView(true);
-
-                        await _actionRunner.StartAction(actor, new List<CharacterActor>() { target },
-                            actor.Configuration.Abilities.FirstOrDefault(a => a.Type == EAbilityType.MeleeAttack));
-
-                        target.WorldView.ChangeTargetView(false);
-                    }
-                    
-                    actor.State.IsTurn.Value = false;
-                    actor.WorldView.ChangeTurnView(false);
-
-                    State.ResetTurn();
-
-                    if (State.IsBattleEnd(out ETeamId winner))
-                    {
-                        Debug.Log($"team is won {winner}");
-
-                        State.Phase.Value = EBattlePhase.End;
-
-                        break;
-                    }
-                }
-                else
-                {
-                    break;
-                }
             }
         }
     }

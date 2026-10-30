@@ -17,18 +17,10 @@ namespace Code.UI
                 builder.RegisterInstance(windowView).AsSelf();
             }
 
-            //builder.Register<MenuNavigator>(Lifetime.Singleton);
+            builder.Register<UIWindowNavigator>(Lifetime.Singleton);
             
-            builder.Register<HudWindowController>(Lifetime.Singleton).AsImplementedInterfaces();
+            builder.Register<StartWindowController>(Lifetime.Singleton).AsImplementedInterfaces();
+            builder.Register<BattleWindowController>(Lifetime.Singleton).AsImplementedInterfaces();
         }
-
-#if UNITY_EDITOR
-        [Button]
-        private void _findViews()
-        {
-            _views = GetComponentsInChildren<UIWindowView>(true);
-            EditorUtility.SetDirty(this);
-        }
-#endif
     }
 }

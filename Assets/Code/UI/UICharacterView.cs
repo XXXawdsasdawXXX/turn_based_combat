@@ -38,7 +38,6 @@ namespace Code.UI
         {
             _dispose();
 
-            Debug.Log($"set actor {actor.Configuration.Name}");
             RuntimeStat healthStat = actor.State.Stats[EStatType.Health]; 
             _subscriptions.Add(healthStat.Current
                 .DistinctUntilChanged()
