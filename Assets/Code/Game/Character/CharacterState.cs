@@ -9,19 +9,28 @@ namespace Game.Character
     public class CharacterState
     {
         public Dictionary<EStatType, RuntimeStat> Stats { get; }
-        public ReactiveProperty<bool> IsTurn { get; }
+        
+        public ReadOnlyReactiveProperty<bool> IsTurn => _isTurn;
+        private readonly ReactiveProperty<bool> _isTurn = new(false);
+        
+        public ReadOnlyReactiveProperty<bool> IsObserved => _isObserved;
+        private readonly ReactiveProperty<bool> _isObserved = new(false);
+        
+        public ReadOnlyReactiveProperty<bool> IsTarget => _isTarget;
+        private readonly ReactiveProperty<bool> _isTarget = new(false);
+        
         public ETeamId Team { get; }
         public int Slot { get; }
-
-
-
+        
+        private bool _isCanBeTarget;
+        
+        
         public CharacterState(CharacterConfiguration configuration, ETeamId team, int slot)
         {
             Team = team;
             Slot = slot;
             
             Stats = new Dictionary<EStatType, RuntimeStat>();
-            IsTurn = new ReactiveProperty<bool>(false);
 
             foreach (Stat stat in configuration.Stats)
             {
@@ -31,10 +40,37 @@ namespace Game.Character
                 }
             }
         }
-
+        
+        public void SetTargetState(bool isTarget)
+        {
+            _isTarget.Value = IsAlive() && _isCanBeTarget && isTarget;
+        }
+        
+        public void SetObservedState(bool isObserved)
+        {
+            _isObserved.Value = IsAlive() && _isCanBeTarget && isObserved;
+        }
+        
+        public void SetCanBeTarget(bool isCanBeTarget)
+        {
+            _isCanBeTarget = isCanBeTarget;
+        }
+        
+        public void SetTurnState(bool isTurn)
+        {
+            _isTurn.Value = isTurn;
+        }
+        
         public bool IsAlive()
         {
             return Stats[EStatType.Health].Current.Value > 0;
+        }
+
+        public void Dispose()
+        {
+            _isTurn?.Dispose();
+            _isObserved?.Dispose();
+            _isTarget?.Dispose();
         }
     }
 }

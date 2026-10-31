@@ -14,13 +14,33 @@ namespace Game.Runtime
         public ReactiveProperty<int> Round { get; } = new(0);
         public ReactiveProperty<CharacterActor> TurnActor { get; } = new(null);
         public ReactiveProperty<CharacterActor> TurnTarget { get; } = new(null);
-        
         public ReactiveProperty<Ability> TurnAbility { get; } = new(null);
-        
 
+
+        public void DisableTargetMode()
+        {
+            foreach (CharacterActor actor in EnemyTeam)
+            {
+                actor.State.SetCanBeTarget(false);
+            }    
+            
+            foreach (CharacterActor actor in PlayerTeam)
+            {
+                actor.State.SetCanBeTarget(false);
+            }    
+        }
+
+        public void EnableTargetModeForTeam(ETeamId team)
+        {
+            foreach (CharacterActor actor in team is ETeamId.Enemy ? EnemyTeam : PlayerTeam)
+            {
+                actor.State.SetCanBeTarget(true);
+            }
+        }
+        
         public bool IsBattleEnd(out ETeamId winner)
         {
-            bool teamHasAliveActor(ETeamId team)
+            bool TeamHasAliveActor(ETeamId team)
             {
                 return team is ETeamId.Player
                     ? PlayerTeam.Any(a => a.State.IsAlive())
@@ -29,21 +49,21 @@ namespace Game.Runtime
             
             winner = ETeamId.Player;
          
-            if (!teamHasAliveActor(ETeamId.Enemy))
+            if (!TeamHasAliveActor(ETeamId.Enemy))
             {
                 return true;
             }
-
-            if(!teamHasAliveActor(ETeamId.Player))
+            
+            if (!TeamHasAliveActor(ETeamId.Player))
             {
                 winner = ETeamId.Enemy;
                 return true;
             }
-
+            
             return false;
         }
 
-        public void ResetTurn()
+        public void ResetTurnProperties()
         {
             TurnActor.Value = null;
             TurnTarget.Value = null;

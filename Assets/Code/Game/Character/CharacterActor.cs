@@ -14,7 +14,6 @@ namespace Game.Character
             Configuration = configuration;
                 
             WorldView = worldView;
-            WorldView.SetBodyColor(configuration.Color);
 
             State = state;
         }

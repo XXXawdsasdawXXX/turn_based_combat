@@ -29,6 +29,7 @@ namespace Game.Runtime
             CharacterWorldView view = Object.Instantiate(_assetStorage.CharacterWorldView);
             CharacterState state = new(configuration, team, slot); 
             CharacterActor actor = new(configuration, view, state);
+            view.SetActor(actor);
 
 #if UNITY_EDITOR
             view.SetGizmoModel(new CharacterWorldView.CharacterGizmoModel

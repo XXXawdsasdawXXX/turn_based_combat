@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using R3;
 using UnityEngine;
 
 #if UNITY_EDITOR
@@ -16,11 +19,50 @@ namespace Game.Character
         [Header("Markers")]
         [SerializeField] private GameObject _turnMarker;
         [SerializeField] private GameObject _targetMarker;
+        [SerializeField] private GameObject _observedMarker;
+
+        private readonly List<IDisposable> _subscriptions = new();
+        
+        private CharacterState _state;
 
         
         private void OnEnable()
         {
             Animation.PlayIdle();
+        }
+
+        private void OnDisable()
+        {
+            _dispose();
+        }
+
+        private void OnMouseEnter()
+        {
+            _state?.SetObservedState(true);
+        }
+
+        private void OnMouseDown()
+        {
+            _state?.SetTargetState(true);
+            _state?.SetObservedState(false);
+        }
+        
+        private void OnMouseExit()
+        {
+            _state?.SetObservedState(false);
+        }
+        
+        public void SetActor(CharacterActor actor)
+        {
+            _dispose();
+            
+            _state = actor.State;
+
+            _setBodyColor(actor.Configuration.Color);
+
+            _subscriptions.Add(_state.IsTurn.DistinctUntilChanged().Subscribe(_changeTurnView));
+            _subscriptions.Add(_state.IsTarget.DistinctUntilChanged().Subscribe(_changeTargetView));
+            _subscriptions.Add(_state.IsObserved.DistinctUntilChanged().Subscribe(_changeObservedView));
         }
 
         public void SetPosition(Vector3 position, ETeamId team)
@@ -31,7 +73,24 @@ namespace Game.Character
             transform.localScale = new Vector3(scaleX,1,1);
         }
 
-        public void SetBodyColor(Color color)
+        private void _dispose()
+        {
+            if (_subscriptions.Count == 0)
+            {
+                return;
+            }
+
+            foreach (IDisposable disposable in _subscriptions)
+            {
+                disposable?.Dispose();
+            }
+            
+            _subscriptions.Clear();
+
+            _state = null;
+        }
+
+        private void _setBodyColor(Color color)
         {
             foreach (SpriteRenderer renderer in _renderers)
             {
@@ -39,16 +98,22 @@ namespace Game.Character
             }
         }
 
-        public void ChangeTurnView(bool isActive)
+        private void _changeTurnView(bool isActive)
         {
             _turnMarker.SetActive(isActive);
         }
 
-        public void ChangeTargetView(bool isActive)
+        private void _changeTargetView(bool isActive)
         {
             _targetMarker.SetActive(isActive);
         }
         
+        private void _changeObservedView(bool isActive)
+        {
+            _observedMarker.SetActive(isActive);
+        }
+        
+
 #if UNITY_EDITOR
         
         public class CharacterGizmoModel

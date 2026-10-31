@@ -7,6 +7,7 @@ using Cysharp.Threading.Tasks;
 using Game.Abilities;
 using Game.Character;
 using Game.Configurations;
+using R3;
 using UnityEngine;
 using VContainer.Unity;
 
@@ -27,7 +28,9 @@ namespace Game.Runtime
         private readonly TeamsConfiguration _teamsConfiguration;
 
         private readonly ActionRunner _actionRunner;
+        
         private TurnQueue _queue;
+        
         private CancellationTokenSource _cts;
 
         
@@ -38,10 +41,8 @@ namespace Game.Runtime
             _actionRunner = new ActionRunner();
         }
 
-        public async void Start()
+        public void Start()
         {
-            await UniTask.Delay(1); //todo ui не успевает подписаться на state
-
             _cts = new CancellationTokenSource();
         }
 
@@ -119,50 +120,61 @@ namespace Game.Runtime
 
         private async Task _runTurn(CharacterActor actor, CancellationToken token)
         {
+            State.DisableTargetMode();
+            
             State.TurnActor.Value = actor;
-            actor.State.IsTurn.Value = true;
-            actor.WorldView.ChangeTurnView(true);
-
+            actor.State.SetTurnState(true);
+            
             if (actor.State.Team is ETeamId.Enemy)
             {
                 State.Phase.Value = EBattlePhase.EnemyTurn;
                 int randomAbilityIndex = UnityEngine.Random.Range(0, actor.Configuration.Abilities.Length);
                 State.TurnAbility.Value = actor.Configuration.Abilities[randomAbilityIndex];
-                State.TurnTarget.Value = State.TurnAbility.Value.Type is EAbilityType.Heal 
+             
+                State.EnableTargetModeForTeam(State.TurnAbility.Value.Type is EAbilityType.Heal 
+                    ? ETeamId.Enemy 
+                    : ETeamId.Player);
+            
+                CharacterActor enemyTarget = State.TurnAbility.Value.Type is EAbilityType.Heal 
                     ? State.EnemyTeam.FirstOrDefault(a => a.State.IsAlive())
                     : State.PlayerTeam.FirstOrDefault(a => a.State.IsAlive());
+
+                enemyTarget?.State.SetTargetState(true);
+                State.TurnTarget.Value = enemyTarget;
             }
             else
             {
                 State.Phase.Value = EBattlePhase.PlayerTurn;
-
+                
                 await UniTask.WaitUntil(() => State.TurnAbility.Value != null, cancellationToken: token);
 
-                State.TurnTarget.Value = State.TurnAbility.Value.Type is EAbilityType.Heal 
-                    ? State.PlayerTeam.FirstOrDefault(a => a.State.IsAlive())
-                    : State.EnemyTeam.FirstOrDefault(a => a.State.IsAlive());
+                State.EnableTargetModeForTeam(State.TurnAbility.Value.Type is EAbilityType.Heal 
+                    ? ETeamId.Player 
+                    : ETeamId.Enemy);
+
+                await UniTask.WaitUntil(() => State.TurnTarget.Value != null, cancellationToken: token);
             }
 
+            State.DisableTargetMode();
+            
             CharacterActor target = State.TurnTarget.Value;
         
             if (target != null && State.TurnAbility.Value.Type is not  EAbilityType.Skip)
             {
-                target.WorldView.ChangeTargetView(true);
+                target.State.SetTargetState(true);
 
                 await _actionRunner.StartAction(
                     actor, 
                     new List<CharacterActor>() { target },
                     State.TurnAbility.Value);
 
-                target.WorldView.ChangeTargetView(false);
+                target.State.SetTargetState(false);
             }
 
-            actor.State.IsTurn.Value = false;
-            actor.WorldView.ChangeTurnView(false);
+            actor.State.SetTurnState(false);
 
-            State.ResetTurn();
+            State.ResetTurnProperties();
         }
-
 
         private void _createTeam(
             ETeamId team, 
@@ -195,6 +207,19 @@ namespace Game.Runtime
                 CharacterActor actor = _characterFactory.Create(characterConfiguration, team, slot);
                 actors.Add(actor);
                 actor.WorldView.SetPosition(new Vector3(x, Y, 0), team);
+
+                actor.State.IsTarget.DistinctUntilChanged().Subscribe(isTarget =>
+                {
+                    if (isTarget)
+                    {
+                        State.TurnTarget.Value?.State.SetTargetState(false);
+                        State.TurnTarget.Value = actor;
+                    }
+                    else
+                    {
+                        State.TurnTarget.Value = null;
+                    }
+                });
             }
         }
     }
