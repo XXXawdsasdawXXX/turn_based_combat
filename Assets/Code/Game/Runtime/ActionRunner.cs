@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using Game.Abilities;
 using Game.Character;
+using Game.Stats;
 
 namespace Game.Runtime
 {
@@ -17,9 +18,9 @@ namespace Game.Runtime
             
             foreach (CharacterActor target in targets)
             {
-                if (target.State.Stats.ContainsKey(ability.Effect.Type))
+                if (target.State.Stats.TryGetValue(ability.Effect.Type, out RuntimeStat stat))
                 {
-                    target.State.Stats[ability.Effect.Type].Current.Value += ability.Effect.BaseValue;
+                    stat.SetCurrent(stat.Current.Value + ability.Effect.BaseValue);
 
                     if (ability.IsAttacking())
                     {

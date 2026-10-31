@@ -11,6 +11,18 @@ namespace Game.Abilities
         [field: SerializeField] public EAbilityType Type { get; private set; }
         [field: SerializeField] public Stat Effect { get; private set; }
 
-        public bool IsAttacking() => Type is not EAbilityType.Heal;
+        
+        public bool IsAttacking()
+        {
+            return Type is not EAbilityType.Heal;
+        }
+
+        public static Ability Skip()
+        {
+            return new Ability()
+            {
+                Type = EAbilityType.Skip
+            };
+        } 
     }
 }

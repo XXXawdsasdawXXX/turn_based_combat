@@ -126,23 +126,33 @@ namespace Game.Runtime
             if (actor.State.Team is ETeamId.Enemy)
             {
                 State.Phase.Value = EBattlePhase.EnemyTurn;
-                State.TurnTarget.Value = State.PlayerTeam.FirstOrDefault(a => a.State.IsAlive());
+                int randomAbilityIndex = UnityEngine.Random.Range(0, actor.Configuration.Abilities.Length);
+                State.TurnAbility.Value = actor.Configuration.Abilities[randomAbilityIndex];
+                State.TurnTarget.Value = State.TurnAbility.Value.Type is EAbilityType.Heal 
+                    ? State.EnemyTeam.FirstOrDefault(a => a.State.IsAlive())
+                    : State.PlayerTeam.FirstOrDefault(a => a.State.IsAlive());
             }
             else
             {
                 State.Phase.Value = EBattlePhase.PlayerTurn;
-                State.TurnTarget.Value = State.EnemyTeam.FirstOrDefault(a => a.State.IsAlive());
+
+                await UniTask.WaitUntil(() => State.TurnAbility.Value != null, cancellationToken: token);
+
+                State.TurnTarget.Value = State.TurnAbility.Value.Type is EAbilityType.Heal 
+                    ? State.PlayerTeam.FirstOrDefault(a => a.State.IsAlive())
+                    : State.EnemyTeam.FirstOrDefault(a => a.State.IsAlive());
             }
 
             CharacterActor target = State.TurnTarget.Value;
-            if (target != null)
+        
+            if (target != null && State.TurnAbility.Value.Type is not  EAbilityType.Skip)
             {
                 target.WorldView.ChangeTargetView(true);
 
                 await _actionRunner.StartAction(
                     actor, 
                     new List<CharacterActor>() { target },
-                    actor.Configuration.Abilities.FirstOrDefault(a => a.Type == EAbilityType.MeleeAttack));
+                    State.TurnAbility.Value);
 
                 target.WorldView.ChangeTargetView(false);
             }

@@ -14,19 +14,25 @@ namespace Code.UI
         [field: SerializeField] public Button SkipButton { get; private set; }
 
         [SerializeField] private GameObject _locker;
-
         [SerializeField] private MonoPool<AbilityView> _abilitiesPool;
 
+        private BattleState _state;
+        
         private IDisposable _actorSubscription;
         private IDisposable _abilitySubscription;
-        
+
+
         public void SubscribeToBattleState(BattleState state)
         {
+            _state = state;
+            
             _actorSubscription = state.TurnActor.DistinctUntilChanged().Subscribe(_setActor);
             _abilitySubscription = state.TurnAbility.DistinctUntilChanged().Subscribe(ability =>
             {
                 _setInteractable(state.TurnActor.Value.State.Team == ETeamId.Player && ability == null);
             });
+            
+            SkipButton.onClick.AddListener(_skip);
         }
 
         public void DisposeBattleSubscription()
@@ -36,19 +42,37 @@ namespace Code.UI
             
             _abilitySubscription?.Dispose();
             _abilitySubscription = null;
+           
+            SkipButton.onClick.RemoveListener(_skip);
         }
-        
-        private void _setActor(CharacterActor stateCurrentActor)
+
+        private void _setActor(CharacterActor actor)
         {
             _abilitiesPool.DisableAll();
-            
-            foreach (Ability ability in stateCurrentActor.Configuration.Abilities)
+
+            for (int index = 0; index < actor.Configuration.Abilities.Length; index++)
             {
+                Ability ability = actor.Configuration.Abilities[index];
                 AbilityView abilityView = _abilitiesPool.GetNext();
                 abilityView.transform.SetSiblingIndex(0);
                 abilityView.SetAbility(ability);
+
+                int i = index;
+                
+                abilityView.Clicked += () =>
+                {
+                    _state.TurnAbility.Value ??= actor.Configuration.Abilities[i];
+                };
+                
                 abilityView.Enable();
             }
+            
+            _setInteractable(actor.State.Team == ETeamId.Player);
+        }
+
+        private void _skip()
+        {
+            _state.TurnAbility.Value ??= Ability.Skip();
         }
 
         private void _setInteractable(bool isInteractable)

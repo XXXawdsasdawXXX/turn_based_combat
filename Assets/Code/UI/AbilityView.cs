@@ -9,11 +9,17 @@ namespace Code.UI
 {
     public class AbilityView : MonoBehaviour, IPoolEntity
     {
+        public event Action Clicked;
+
+        [SerializeField] private Button _button;
         [SerializeField] private TMP_Text _textDescriptiom;
         [SerializeField] private Image _imageBackground; 
         
+        
         public void Enable()
         {
+            _button.onClick.AddListener(_onClicked);
+            
             gameObject.SetActive(true);            
         }
 
@@ -39,7 +45,16 @@ namespace Code.UI
 
         public void Disable()
         {
-            gameObject.SetActive(false);            
+            gameObject.SetActive(false);   
+            
+            Clicked = null;
+            
+            _button.onClick.RemoveListener(_onClicked);
+        }
+
+        private void _onClicked()
+        {
+            Clicked?.Invoke();
         }
     }
 }

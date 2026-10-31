@@ -10,5 +10,19 @@ namespace Game.Stats
         {
             Current = new ReactiveProperty<float>(value);
         }
+
+        public void SetCurrent(float value)
+        {
+            if (value < 0)
+            {
+                value = 0;
+            }
+            else if(value > BaseValue)
+            {
+                value = BaseValue;
+            }
+
+            Current.Value = value;
+        }
     }
 }

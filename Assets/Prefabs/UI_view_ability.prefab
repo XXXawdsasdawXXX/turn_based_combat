@@ -50,6 +50,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8ec98c2f5b254fc1ad15ebe110eff7c0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UI::Code.UI.AbilityView
+  _button: {fileID: 2768946877363609766}
   _textDescriptiom: {fileID: 2201897694527956489}
   _imageBackground: {fileID: 8139124573924977802}
 --- !u!1 &2878821166585505433
