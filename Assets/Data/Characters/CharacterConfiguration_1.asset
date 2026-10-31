@@ -25,17 +25,17 @@ MonoBehaviour:
     <BaseValue>k__BackingField: 0.36620623
   <Abilities>k__BackingField:
   - <Name>k__BackingField: melee attack
-    <Type>k__BackingField: 0
-    <Effect>k__BackingField:
-      <Type>k__BackingField: 1
-      <BaseValue>k__BackingField: -1
-  - <Name>k__BackingField: range attack
     <Type>k__BackingField: 1
     <Effect>k__BackingField:
       <Type>k__BackingField: 1
       <BaseValue>k__BackingField: -1
-  - <Name>k__BackingField: heal
+  - <Name>k__BackingField: range attack
     <Type>k__BackingField: 2
+    <Effect>k__BackingField:
+      <Type>k__BackingField: 1
+      <BaseValue>k__BackingField: -1
+  - <Name>k__BackingField: heal
+    <Type>k__BackingField: 3
     <Effect>k__BackingField:
       <Type>k__BackingField: 1
       <BaseValue>k__BackingField: 1
