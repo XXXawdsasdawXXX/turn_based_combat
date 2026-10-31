@@ -25,35 +25,6 @@ namespace Game.Configurations
         [field: SerializeField] public Ability[] Abilities { get; private set; }
         
         
-        public bool TryGetStatValue(EStatType type, out float value)
-        {
-            value = 0;
-            
-            foreach (Stat stat in Stats)
-            {
-                if (stat.Type == type)
-                {
-                    value = stat.BaseValue;
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        public float GetStatValue(EStatType type)
-        {
-            foreach (Stat stat in Stats)
-            {
-                if (stat.Type == type)
-                {
-                    return stat.BaseValue;
-                }
-            }
-
-            return 0;
-        }
-        
 #if UNITY_EDITOR
         
         [Button]

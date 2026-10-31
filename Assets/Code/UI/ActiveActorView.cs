@@ -52,6 +52,11 @@ namespace Code.UI
         {
             _abilitiesPool.DisableAll();
 
+            if (actor == null)
+            {
+                return;
+            }
+            
             for (int i = 0; i < actor.Configuration.Abilities.Length; i++)
             {
                 Ability ability = actor.Configuration.Abilities[i];
@@ -62,12 +67,11 @@ namespace Code.UI
                 bool isActive = ActionResolver.CanUse(
                         _state.TurnActor.Value, 
                         ability, 
-                        _state.GetTeam(actor.State.Team));
+                        _state.GetAllies());
                 
                 abilityView.SetInteractable(isActive);
                 
                 int index = i;
-                
                 abilityView.Clicked += () =>
                 {
                     if (_current != null)
@@ -80,8 +84,6 @@ namespace Code.UI
                     
                     _state.TurnAbility.Value = actor.Configuration.Abilities[index];
                 };
-                
-                abilityView.Enable();
             }
             
             _setInteractable(actor.State.Team == ETeamId.Player);

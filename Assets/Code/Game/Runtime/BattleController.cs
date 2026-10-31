@@ -118,7 +118,7 @@ namespace Game.Runtime
 
         private async UniTask _runTurn(CharacterActor actor, CancellationToken token)
         {
-            State.DisableTargetMode();
+            State.DisableChoiceTargetMode();
 
             State.TurnActor.Value = actor;
             actor.State.SetTurnState(true);
@@ -126,27 +126,27 @@ namespace Game.Runtime
             if (actor.State.Team is ETeamId.Enemy)
             {
                 State.Phase.Value = EBattlePhase.EnemyTurn;
-        
-                while (!ActionResolver.CanUse(State.TurnActor.Value, State.TurnAbility.Value, State.EnemyTeam))
+                
+                int randomAbilityIndex = Random.Range(0, actor.Configuration.Abilities.Length);
+                State.TurnAbility.Value = actor.Configuration.Abilities[randomAbilityIndex];
+                
+                if (!ActionResolver.CanUse(State.TurnActor.Value, State.TurnAbility.Value, State.EnemyTeam))
                 {
-                    int randomAbilityIndex = Random.Range(0, actor.Configuration.Abilities.Length);
-                    State.TurnAbility.Value = actor.Configuration.Abilities[randomAbilityIndex];
-                    Debug.Log($"enemy choice ability {State.TurnAbility.Value.Type}");
+                    State.TurnAbility.Value = Ability.Skip();
                 }
                 
-                _syncTargetModeForAbility();
+                _syncChoiceTargetMode();
 
                 IReadOnlyList<CharacterActor> validTargets = ActionResolver.GetValidTargets(
-                    State.TurnAbility.Value, State.GetTeam(ETeamId.Enemy), State.GetTeam(ETeamId.Player));
+                    State.TurnAbility.Value, 
+                    State.GetAllies(), 
+                    State.GetEnemies());
 
-                if (validTargets == null)
+                if (validTargets.Count > 0)
                 {
-                    Debug.Log($"enemy return ");
-                    return;
+                    CharacterActor enemyTarget = validTargets[Random.Range(0, validTargets.Count)];
+                    State.TurnTarget.Value = enemyTarget;
                 }
-                CharacterActor enemyTarget = validTargets[Random.Range(0, validTargets.Count)];
-
-                State.TurnTarget.Value = enemyTarget;
             }
             else
             {
@@ -163,7 +163,7 @@ namespace Game.Runtime
                         break;
                     }
 
-                    _syncTargetModeForAbility();
+                    _syncChoiceTargetMode();
 
                     await UniTask.WaitUntil(
                         () => State.TurnTarget.Value != null || State.TurnAbility.Value != chosen,
@@ -171,28 +171,29 @@ namespace Game.Runtime
                 }
             }
 
-            State.DisableTargetMode();
-
             CharacterActor target = State.TurnTarget.Value;
 
             if (target != null && State.TurnAbility.Value.Type is not EAbilityType.Skip)
             {
-                target.State.SetTargetState(true);
+                State.DisableChoiceTargetMode(keepTargetHighlight: target);
+                target.State.ForceTargetState(true);
 
                 ActionOutcome outcome = ActionResolver.Resolve(
                     actor, 
                     State.TurnAbility.Value, 
                     target, 
-                    State.PlayerTeam, 
-                    State.EnemyTeam);
+                    State.GetAllies());
                 
                 await ActionRunner.StartAction(actor, outcome);
                 
-                target.State.SetTargetState(false);
+                target.State.ForceTargetState(false);
+            }
+            else
+            {
+                State.DisableChoiceTargetMode();
             }
 
             actor.State.SetTurnState(false);
-
             State.ResetTurnProperties();
         }
 
@@ -232,10 +233,15 @@ namespace Game.Runtime
                 {
                     if (isTarget)
                     {
-                        State.TurnTarget.Value?.State.SetTargetState(false);
+                        CharacterActor previous = State.TurnTarget.Value;
+                        if (previous != null && previous != actor)
+                        {
+                            previous.State.SetTargetState(false);
+                        }
+
                         State.TurnTarget.Value = actor;
                     }
-                    else
+                    else if (State.TurnTarget.Value == actor)
                     {
                         State.TurnTarget.Value = null;
                     }
@@ -243,25 +249,21 @@ namespace Game.Runtime
             }
         }
 
-        private void _syncTargetModeForAbility()
+        private void _syncChoiceTargetMode()
         {   
-            State.DisableTargetMode();
-        
-            State.TurnTarget.Value = null;
-
-            bool isPlayerTurn = State.TurnActor.Value.State.Team is ETeamId.Player;
-
+            State.DisableChoiceTargetMode();
+            
             IReadOnlyList<CharacterActor> validTargets = ActionResolver.GetValidTargets(
                 State.TurnAbility.Value,
-                isPlayerTurn ? State.PlayerTeam : State.EnemyTeam,
-                isPlayerTurn ? State.EnemyTeam : State.PlayerTeam);
+                State.GetAllies(),
+                State.GetEnemies());
 
-            if (validTargets == null)
+            if (validTargets.Count == 0)
             {
                 return;
             }
             
-            State.EnableTargetMode(validTargets);
+            State.EnableChoiceTargetMode(validTargets);
         }
     }
 }

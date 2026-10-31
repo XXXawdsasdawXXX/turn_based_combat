@@ -43,12 +43,29 @@ namespace Game.Character
         
         public void SetTargetState(bool isTarget)
         {
-            _isTarget.Value = IsAlive() && _isCanBeTarget && isTarget;
+            if (!isTarget)
+            {
+                _isTarget.Value = false;
+                return;
+            }
+
+            _isTarget.Value = IsAlive() && _isCanBeTarget;
         }
         
         public void SetObservedState(bool isObserved)
         {
-            _isObserved.Value = IsAlive() && _isCanBeTarget && isObserved;
+            if (!isObserved)
+            {
+                _isObserved.Value = false;
+                return;
+            }
+
+            _isObserved.Value = IsAlive() && _isCanBeTarget;
+        }
+
+        public void ForceTargetState(bool isTarget)
+        {
+            _isTarget.Value = isTarget && IsAlive();
         }
         
         public void SetCanBeTarget(bool isCanBeTarget)

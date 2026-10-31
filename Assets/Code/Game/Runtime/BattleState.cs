@@ -17,20 +17,13 @@ namespace Game.Runtime
         public ReactiveProperty<Ability> TurnAbility { get; } = new(null);
 
 
-        public void DisableTargetMode()
+        public void DisableChoiceTargetMode(CharacterActor keepTargetHighlight = null)
         {
-            foreach (CharacterActor actor in EnemyTeam)
-            {
-                actor.State.SetCanBeTarget(false);
-            }    
-            
-            foreach (CharacterActor actor in PlayerTeam)
-            {
-                actor.State.SetCanBeTarget(false);
-            }    
+            _clearChoiceTargetMode(EnemyTeam, keepTargetHighlight);
+            _clearChoiceTargetMode(PlayerTeam, keepTargetHighlight);
         }
 
-        public void EnableTargetMode(IReadOnlyList<CharacterActor> actors)
+        public void EnableChoiceTargetMode(IEnumerable<CharacterActor> actors)
         {
             foreach (CharacterActor actor in actors)
             {
@@ -38,11 +31,6 @@ namespace Game.Runtime
             }
         }
 
-        public IReadOnlyList<CharacterActor> GetTeam(ETeamId team)
-        {
-            return team is ETeamId.Player ? PlayerTeam : EnemyTeam;
-        }
-        
         public bool IsBattleEnd(out ETeamId winner)
         {
             bool TeamHasAliveActor(ETeamId team)
@@ -73,6 +61,37 @@ namespace Game.Runtime
             TurnActor.Value = null;
             TurnTarget.Value = null;
             TurnAbility.Value = null;
+        }
+
+        public IReadOnlyList<CharacterActor> GetAllies()
+        {
+            return _isPlayerTurn() ? PlayerTeam : EnemyTeam;
+        }
+
+        public IReadOnlyList<CharacterActor> GetEnemies()
+        {
+            return _isPlayerTurn() ? EnemyTeam : PlayerTeam;
+        }
+
+        private bool _isPlayerTurn()
+        {
+            return TurnActor.Value != null && TurnActor.Value.State.Team == ETeamId.Player;
+        }
+
+        private static void _clearChoiceTargetMode(
+            IEnumerable<CharacterActor> team,
+            CharacterActor keepTargetHighlight)
+        {
+            foreach (CharacterActor actor in team)
+            {
+                actor.State.SetCanBeTarget(false);
+                actor.State.SetObservedState(false);
+
+                if (actor != keepTargetHighlight)
+                {
+                    actor.State.SetTargetState(false);
+                }
+            }
         }
     }
 }
