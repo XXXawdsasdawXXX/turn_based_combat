@@ -29,7 +29,7 @@ namespace Code.UI
             _actorSubscription = state.TurnActor.DistinctUntilChanged().Subscribe(_setActor);
             _abilitySubscription = state.TurnAbility.DistinctUntilChanged().Subscribe(ability =>
             {
-                _setInteractable(state.TurnActor.Value.State.Team == ETeamId.Player && ability == null);
+                _setInteractable(state.TurnActor.Value.State.Team == ETeamId.Player && state.TurnTarget.Value == null);
             });
             
             SkipButton.onClick.AddListener(_skip);
@@ -61,7 +61,7 @@ namespace Code.UI
                 
                 abilityView.Clicked += () =>
                 {
-                    _state.TurnAbility.Value ??= actor.Configuration.Abilities[i];
+                    _state.TurnAbility.Value = actor.Configuration.Abilities[i];
                 };
                 
                 abilityView.Enable();

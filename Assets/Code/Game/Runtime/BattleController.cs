@@ -28,12 +28,12 @@ namespace Game.Runtime
         private readonly TeamsConfiguration _teamsConfiguration;
 
         private readonly ActionRunner _actionRunner;
-        
+
         private TurnQueue _queue;
-        
+
         private CancellationTokenSource _cts;
 
-        
+
         public BattleController(ICharacterFactory characterFactory, TeamsConfiguration teamsConfiguration)
         {
             _characterFactory = characterFactory;
@@ -52,7 +52,7 @@ namespace Game.Runtime
             {
                 return;
             }
-            
+
             State.Phase.Value = EBattlePhase.Initialize;
 
             _createTeam(ETeamId.Player, _teamsConfiguration.Player, State.PlayerTeam);
@@ -64,7 +64,7 @@ namespace Game.Runtime
 
             _runBattle(_cts.Token).Forget();
         }
-        
+
         private async UniTask _runBattle(CancellationToken token)
         {
             try
@@ -99,7 +99,7 @@ namespace Game.Runtime
                 if (_queue.TryGetNextActor(out CharacterActor actor))
                 {
                     await _runTurn(actor, token);
-                    
+
                     if (State.IsBattleEnd(out ETeamId winner))
                     {
                         Debug.Log($"team is won {winner}");
@@ -114,28 +114,26 @@ namespace Game.Runtime
                     break;
                 }
             }
-            
+
             State.Phase.Value = EBattlePhase.EndRound;
         }
 
         private async Task _runTurn(CharacterActor actor, CancellationToken token)
         {
             State.DisableTargetMode();
-            
+
             State.TurnActor.Value = actor;
             actor.State.SetTurnState(true);
-            
+
             if (actor.State.Team is ETeamId.Enemy)
             {
                 State.Phase.Value = EBattlePhase.EnemyTurn;
                 int randomAbilityIndex = UnityEngine.Random.Range(0, actor.Configuration.Abilities.Length);
                 State.TurnAbility.Value = actor.Configuration.Abilities[randomAbilityIndex];
-             
-                State.EnableTargetModeForTeam(State.TurnAbility.Value.Type is EAbilityType.Heal 
-                    ? ETeamId.Enemy 
-                    : ETeamId.Player);
-            
-                CharacterActor enemyTarget = State.TurnAbility.Value.Type is EAbilityType.Heal 
+
+                _syncTargetModeForAbility(State.TurnAbility.Value);
+                
+                CharacterActor enemyTarget = State.TurnAbility.Value.Type is EAbilityType.Heal
                     ? State.EnemyTeam.FirstOrDefault(a => a.State.IsAlive())
                     : State.PlayerTeam.FirstOrDefault(a => a.State.IsAlive());
 
@@ -145,26 +143,33 @@ namespace Game.Runtime
             else
             {
                 State.Phase.Value = EBattlePhase.PlayerTurn;
-                
-                await UniTask.WaitUntil(() => State.TurnAbility.Value != null, cancellationToken: token);
 
-                State.EnableTargetModeForTeam(State.TurnAbility.Value.Type is EAbilityType.Heal 
-                    ? ETeamId.Player 
-                    : ETeamId.Enemy);
+                while (State.TurnTarget.Value == null)
+                {
+                    await UniTask.WaitUntil(() => State.TurnAbility.Value != null, cancellationToken: token);
 
-                await UniTask.WaitUntil(() => State.TurnTarget.Value != null, cancellationToken: token);
+                    Ability chosen = State.TurnAbility.Value;
+                    if (chosen.Type is EAbilityType.Skip)
+                        break;
+
+                    _syncTargetModeForAbility(chosen);
+
+                    await UniTask.WaitUntil(
+                        () => State.TurnTarget.Value != null || State.TurnAbility.Value != chosen,
+                        cancellationToken: token);
+                }
             }
 
             State.DisableTargetMode();
-            
+
             CharacterActor target = State.TurnTarget.Value;
-        
-            if (target != null && State.TurnAbility.Value.Type is not  EAbilityType.Skip)
+
+            if (target != null && State.TurnAbility.Value.Type is not EAbilityType.Skip)
             {
                 target.State.SetTargetState(true);
 
                 await _actionRunner.StartAction(
-                    actor, 
+                    actor,
                     new List<CharacterActor>() { target },
                     State.TurnAbility.Value);
 
@@ -177,7 +182,7 @@ namespace Game.Runtime
         }
 
         private void _createTeam(
-            ETeamId team, 
+            ETeamId team,
             IReadOnlyList<CharacterConfiguration> configurations,
             ICollection<CharacterActor> actors)
         {
@@ -221,6 +226,19 @@ namespace Game.Runtime
                     }
                 });
             }
+        }
+
+        private void _syncTargetModeForAbility(Ability ability)
+        {   
+            State.DisableTargetMode();
+            State.TurnTarget.Value = null;
+
+            bool isPlayerTurn = State.TurnActor.Value.State.Team is ETeamId.Player;
+            bool isTeamTarget = ability.Type is EAbilityType.Heal;
+            
+            State.EnableTargetModeForTeam(isTeamTarget
+                ? isPlayerTurn ? ETeamId.Player : ETeamId.Enemy
+                : isPlayerTurn ? ETeamId.Enemy : ETeamId.Player);
         }
     }
 }
