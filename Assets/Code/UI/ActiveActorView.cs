@@ -21,6 +21,8 @@ namespace Code.UI
         private IDisposable _actorSubscription;
         private IDisposable _abilitySubscription;
 
+        private AbilityView _current;
+
 
         public void SubscribeToBattleState(BattleState state)
         {
@@ -50,18 +52,33 @@ namespace Code.UI
         {
             _abilitiesPool.DisableAll();
 
-            for (int index = 0; index < actor.Configuration.Abilities.Length; index++)
+            for (int i = 0; i < actor.Configuration.Abilities.Length; i++)
             {
-                Ability ability = actor.Configuration.Abilities[index];
+                Ability ability = actor.Configuration.Abilities[i];
                 AbilityView abilityView = _abilitiesPool.GetNext();
                 abilityView.transform.SetSiblingIndex(0);
                 abilityView.SetAbility(ability);
 
-                int i = index;
+                bool isActive = ActionResolver.CanUse(
+                        _state.TurnActor.Value, 
+                        ability, 
+                        _state.GetTeam(actor.State.Team));
+                
+                abilityView.SetInteractable(isActive);
+                
+                int index = i;
                 
                 abilityView.Clicked += () =>
                 {
-                    _state.TurnAbility.Value = actor.Configuration.Abilities[i];
+                    if (_current != null)
+                    {
+                        _current.SetSelectedState(false);
+                    }
+              
+                    _current = abilityView;
+                    _current.SetSelectedState(true);
+                    
+                    _state.TurnAbility.Value = actor.Configuration.Abilities[index];
                 };
                 
                 abilityView.Enable();
@@ -72,7 +89,7 @@ namespace Code.UI
 
         private void _skip()
         {
-            _state.TurnAbility.Value ??= Ability.Skip();
+            _state.TurnAbility.Value = Ability.Skip();
         }
 
         private void _setInteractable(bool isInteractable)

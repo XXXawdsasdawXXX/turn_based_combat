@@ -24,5 +24,10 @@ namespace Game.Stats
 
             Current.Value = value;
         }
+
+        public bool IsFull()
+        {
+            return Current.CurrentValue >= BaseValue;
+        }
     }
 }

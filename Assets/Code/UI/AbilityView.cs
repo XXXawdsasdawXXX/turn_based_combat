@@ -13,8 +13,8 @@ namespace Code.UI
 
         [SerializeField] private Button _button;
         [SerializeField] private TMP_Text _textDescriptiom;
-        [SerializeField] private Image _imageBackground; 
-        
+        [SerializeField] private Image _imageBackground;
+        [SerializeField] private GameObject _markerSelect;
         
         public void Enable()
         {
@@ -23,6 +23,11 @@ namespace Code.UI
             gameObject.SetActive(true);            
         }
 
+        public void SetInteractable(bool isInteractable)
+        {
+            _button.interactable = isInteractable;
+        }
+        
         public void SetAbility(Ability ability)
         {
             _textDescriptiom.SetText($"{ability.Type} - {ability.Effect.BaseValue}");
@@ -32,15 +37,24 @@ namespace Code.UI
                 case EAbilityType.MeleeAttack:
                     _imageBackground.color = new Color(0.6f, 0.4f, 0.2f, 1);
                     break;
+                
                 case EAbilityType.RangeAttack:
                     _imageBackground.color = new Color(0.6f, 0.2f, 0.4f, 1);
                     break;
+                
                 case EAbilityType.Heal:
                     _imageBackground.color = new Color(0.3f, 0.4f, 0.2f, 1);
                     break;
+                
                 default:
-                    throw new ArgumentOutOfRangeException();
+                    _imageBackground.color = Color.black;
+                    break;
             }
+        }
+
+        public void SetSelectedState(bool isSelect)
+        {
+            _markerSelect.SetActive(isSelect);
         }
 
         public void Disable()
@@ -50,6 +64,8 @@ namespace Code.UI
             Clicked = null;
             
             _button.onClick.RemoveListener(_onClicked);
+
+            SetSelectedState(false);
         }
 
         private void _onClicked()

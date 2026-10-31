@@ -30,12 +30,17 @@ namespace Game.Runtime
             }    
         }
 
-        public void EnableTargetModeForTeam(ETeamId team)
+        public void EnableTargetMode(IReadOnlyList<CharacterActor> actors)
         {
-            foreach (CharacterActor actor in team is ETeamId.Enemy ? EnemyTeam : PlayerTeam)
+            foreach (CharacterActor actor in actors)
             {
                 actor.State.SetCanBeTarget(true);
             }
+        }
+
+        public IReadOnlyList<CharacterActor> GetTeam(ETeamId team)
+        {
+            return team is ETeamId.Player ? PlayerTeam : EnemyTeam;
         }
         
         public bool IsBattleEnd(out ETeamId winner)

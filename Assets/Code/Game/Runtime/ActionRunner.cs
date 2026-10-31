@@ -1,53 +1,46 @@
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
-using Game.Abilities;
 using Game.Character;
 using Game.Stats;
 
 namespace Game.Runtime
 {
-    public class ActionRunner
+    public static class ActionRunner
     {
-        public async UniTask StartAction(CharacterActor actor, List<CharacterActor> targets, Ability ability)
+        public static async UniTask StartAction(CharacterActor actor, ActionOutcome outcome)
         {
-            await actor.WorldView.Animation.PlayUseAbility();
+            if (outcome.Kind is EActionOutcomeKind.Skip)
+            {
+                return;
+            }
             
+            await actor.WorldView.Animation.PlayUseAbility();
             actor.WorldView.Animation.PlayIdle();
             
-            List<UniTask> _impacts = new();
-            
-            foreach (CharacterActor target in targets)
+            if (outcome.Kind is EActionOutcomeKind.Miss)
             {
-                if (target.State.Stats.TryGetValue(ability.Effect.Type, out RuntimeStat stat))
-                {
-                    stat.SetCurrent(stat.Current.Value + ability.Effect.BaseValue);
-
-                    if (ability.IsAttacking())
-                    {
-                        _impacts.Add(target.WorldView.Animation.PlayTakeDamage());
-                    }
-                }
+                return;
             }
+            
+            List<UniTask> _impacts = new();
 
-            await UniTask.WhenAll(_impacts);
-
-            if (ability.IsAttacking())
+            if (outcome.Target.State.Stats.TryGetValue(outcome.StatType, out RuntimeStat targetStat))
             {
-                _impacts.Clear();
-               
-                foreach (CharacterActor target in targets)
+                targetStat.SetCurrent(targetStat.Current.CurrentValue + outcome.StatDelta);
+            }
+            
+            if (outcome.Kind is EActionOutcomeKind.Hit)
+            {
+                await outcome.Target.WorldView.Animation.PlayTakeDamage();
+
+                if (outcome.Target.State.IsAlive())
                 {
-                    if (!target.State.IsAlive())
-                    {
-                        _impacts.Add(target.WorldView.Animation.PlayDie());
-                    }
-                    else
-                    {
-                        target.WorldView.Animation.PlayIdle();
-                    }
+                    outcome.Target.WorldView.Animation.PlayIdle();
                 }
-                
-                await UniTask.WhenAll(_impacts);
+                else
+                {
+                    await outcome.Target.WorldView.Animation.PlayDie();
+                }
             }
         }
     }
