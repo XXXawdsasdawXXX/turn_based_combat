@@ -8,7 +8,6 @@ namespace Game.Runtime
     {
         public IReadOnlyList<CharacterActor> Queue => _allActors;
         private readonly List<CharacterActor> _allActors = new();
-
         public int LastIndex { get; private set; }
         
 

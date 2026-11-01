@@ -79,6 +79,23 @@ namespace Game.Runtime
             _clearChoiceTargetMode(EnemyTeam, keepTargetHighlight);
             _clearChoiceTargetMode(PlayerTeam, keepTargetHighlight);
         }
+
+        public void SyncChoiceTargetMode()
+        {
+            DisableChoiceTargetMode();
+
+            IReadOnlyList<CharacterActor> validTargets = ActionResolver.GetValidTargets(
+                Turn.Ability.CurrentValue,
+                GetAllies(),
+                GetEnemies());
+
+            if (validTargets.Count == 0)
+            {
+                return;
+            }
+
+            EnableChoiceTargetMode(validTargets);
+        }
         
         public void ResetState()
         {

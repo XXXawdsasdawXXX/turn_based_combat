@@ -160,6 +160,12 @@ namespace Game.Runtime
             }
         }
 
+        public static bool IsFrontlineCharacter(CharacterActor actor, IEnumerable<CharacterActor> team)
+        {
+            CharacterActor fronliner = _getFrontline(team);
+            return fronliner != null && fronliner.State.Slot == actor.State.Slot;
+        }
+        
         private static CharacterActor _getFrontline(IEnumerable<CharacterActor> team)
         {
             return team.FirstOrDefault(actor => actor.State.IsAlive());

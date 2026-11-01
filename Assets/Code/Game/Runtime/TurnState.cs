@@ -40,7 +40,7 @@ namespace Game.Runtime
 
         public void ResetState()
         {
-            _actor.Value.State.SetTurnState(false);
+            _actor.Value?.State.SetTurnState(false);
             _actor.Value = null;
             _target.Value = null;
             _ability.Value = null;
