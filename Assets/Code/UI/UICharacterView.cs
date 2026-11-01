@@ -36,18 +36,18 @@ namespace Code.UI
         
         public void OnPointerEnter(PointerEventData eventData)
         {
-            _state.SetObservedState(true);
+            _state?.SetObservedState(true);
         }
 
         public void OnPointerDown(PointerEventData eventData)
         {
-            _state.SetTargetState(true);
-            _state.SetObservedState(false);
+            _state?.SetTargetState(true);
+            _state?.SetObservedState(false);
         }
 
         public void OnPointerExit(PointerEventData eventData)
         {
-            _state.SetObservedState(false);
+            _state?.SetObservedState(false);
         }
 
         public void Disable()

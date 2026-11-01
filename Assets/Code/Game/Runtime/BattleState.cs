@@ -1,34 +1,44 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using Game.Abilities;
 using Game.Character;
 using R3;
 
 namespace Game.Runtime
 {
-    public class BattleState
+    public class BattleState : IDisposable
     {
-        public ReactiveProperty<EBattlePhase> Phase { get; } = new(EBattlePhase.NotStarted);
         public List<CharacterActor> PlayerTeam { get; } = new();
         public List<CharacterActor> EnemyTeam { get; } = new();
-        public ReactiveProperty<int> Round { get; } = new(0);
-        public ReactiveProperty<CharacterActor> TurnActor { get; } = new(null);
-        public ReactiveProperty<CharacterActor> TurnTarget { get; } = new(null);
-        public ReactiveProperty<Ability> TurnAbility { get; } = new(null);
+     
+        public ReadOnlyReactiveProperty<int> Round => _round;
+        private readonly ReactiveProperty<int> _round = new(0);
+        
+        public ReadOnlyReactiveProperty<EBattlePhase> Phase => _phase;
+        private readonly ReactiveProperty<EBattlePhase> _phase = new(EBattlePhase.NotStarted);
+        
+        public RoundQueue RoundActorsQueue { get; } = new();
+        public TurnState Turn {get; } = new();
 
-
-        public void DisableChoiceTargetMode(CharacterActor keepTargetHighlight = null)
+        
+        public void SetPhase(EBattlePhase phase)
         {
-            _clearChoiceTargetMode(EnemyTeam, keepTargetHighlight);
-            _clearChoiceTargetMode(PlayerTeam, keepTargetHighlight);
+            _phase.Value = phase;
         }
 
-        public void EnableChoiceTargetMode(IEnumerable<CharacterActor> actors)
+        public void NextRound()
         {
-            foreach (CharacterActor actor in actors)
-            {
-                actor.State.SetCanBeTarget(true);
-            }
+            _round.Value++;
+        }
+
+        public IEnumerable<CharacterActor> GetAllies()
+        {
+            return Turn.IsPlayerTurn() ? PlayerTeam : EnemyTeam;
+        }
+
+        public IEnumerable<CharacterActor> GetEnemies()
+        {
+            return Turn.IsPlayerTurn() ? EnemyTeam : PlayerTeam;
         }
 
         public bool IsBattleEnd(out ETeamId winner)
@@ -56,27 +66,36 @@ namespace Game.Runtime
             return false;
         }
 
-        public void ResetTurnProperties()
+        public void EnableChoiceTargetMode(IEnumerable<CharacterActor> actors)
         {
-            TurnActor.Value = null;
-            TurnTarget.Value = null;
-            TurnAbility.Value = null;
+            foreach (CharacterActor actor in actors)
+            {
+                actor.State.SetCanBeTarget(true);
+            }
         }
 
-        public IReadOnlyList<CharacterActor> GetAllies()
+        public void DisableChoiceTargetMode(CharacterActor keepTargetHighlight = null)
         {
-            return _isPlayerTurn() ? PlayerTeam : EnemyTeam;
+            _clearChoiceTargetMode(EnemyTeam, keepTargetHighlight);
+            _clearChoiceTargetMode(PlayerTeam, keepTargetHighlight);
+        }
+        
+        public void ResetState()
+        {
+            Turn.ResetState();            
+            RoundActorsQueue.Clear();
+            
+            _phase.Value = EBattlePhase.NotStarted;
+            _round.Value = 0;
+        }
+        
+
+        public void Dispose()
+        {
+            _phase.Dispose();
+            _round.Dispose();
         }
 
-        public IReadOnlyList<CharacterActor> GetEnemies()
-        {
-            return _isPlayerTurn() ? EnemyTeam : PlayerTeam;
-        }
-
-        private bool _isPlayerTurn()
-        {
-            return TurnActor.Value != null && TurnActor.Value.State.Team == ETeamId.Player;
-        }
 
         private static void _clearChoiceTargetMode(
             IEnumerable<CharacterActor> team,

@@ -21,15 +21,16 @@ namespace Code.UI
         {
             BattleState state = _battleController.State;
             
+            view.RoundQueue.SubscribeToBattleState(_battleController.State);
             view.ActiveActor.SubscribeToBattleState(_battleController.State);
-       
+            
             _subscription.Add(state.Phase.DistinctUntilChanged().Subscribe(_onPhaseChanged));
             _subscription.Add(state.Round.DistinctUntilChanged().Subscribe(view.UpdateRoundNumber));
         }
 
         protected override void onDispose()
         {
-            view.ActiveActor.DisposeBattleSubscription();
+            view.ActiveActor.Dispose();
             
             foreach (IDisposable disposable in _subscription)
             {
@@ -55,11 +56,6 @@ namespace Code.UI
                     view.EnemyTeam.SetTeam(state.EnemyTeam);
                     break;
                 case EBattlePhase.StartRound:
-                    break;
-                case EBattlePhase.PlayerTurn:
-                case EBattlePhase.EnemyTurn:
-                    break;
-                case EBattlePhase.EndRound:
                     break;
                 case EBattlePhase.End:
                     break;

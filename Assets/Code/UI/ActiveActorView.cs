@@ -17,10 +17,6 @@ namespace Code.UI
         [SerializeField] private MonoPool<AbilityView> _abilitiesPool;
 
         private BattleState _state;
-        
-        private IDisposable _actorSubscription;
-        private IDisposable _abilitySubscription;
-
         private AbilityView _current;
 
 
@@ -28,23 +24,17 @@ namespace Code.UI
         {
             _state = state;
             
-            _actorSubscription = state.TurnActor.DistinctUntilChanged().Subscribe(_setActor);
-            _abilitySubscription = state.TurnAbility.DistinctUntilChanged().Subscribe(ability =>
+            state.Turn.Actor.DistinctUntilChanged().Subscribe(_setActor);
+            state.Turn.Ability.DistinctUntilChanged().Subscribe(_ =>
             {
-                _setInteractable(state.TurnActor.Value.State.Team == ETeamId.Player && state.TurnTarget.Value == null);
+                _setInteractable(state.Turn.IsPlayerTurn() && state.Turn.Target.CurrentValue == null);
             });
             
             SkipButton.onClick.AddListener(_skip);
         }
 
-        public void DisposeBattleSubscription()
+        public void Dispose()
         {
-            _actorSubscription?.Dispose();
-            _actorSubscription = null;
-            
-            _abilitySubscription?.Dispose();
-            _abilitySubscription = null;
-           
             SkipButton.onClick.RemoveListener(_skip);
         }
 
@@ -65,7 +55,7 @@ namespace Code.UI
                 abilityView.SetAbility(ability);
 
                 bool isActive = ActionResolver.CanUse(
-                        _state.TurnActor.Value, 
+                        _state.Turn.Actor.CurrentValue, 
                         ability, 
                         _state.GetAllies());
                 
@@ -82,7 +72,7 @@ namespace Code.UI
                     _current = abilityView;
                     _current.SetSelectedState(true);
                     
-                    _state.TurnAbility.Value = actor.Configuration.Abilities[index];
+                    _state.Turn.SetAbility(actor.Configuration.Abilities[index]);
                 };
             }
             
@@ -91,7 +81,7 @@ namespace Code.UI
 
         private void _skip()
         {
-            _state.TurnAbility.Value = Ability.Skip();
+            _state.Turn.SetAbility(Ability.Skip());
         }
 
         private void _setInteractable(bool isInteractable)

@@ -8,11 +8,7 @@ namespace Code.UI
     public class TeamView : MonoBehaviour
     {
         [field: SerializeField]
-        public ETeamId Team
-        {
-            get;
-            private set;
-        } 
+        public ETeamId Team { get; private set; } 
         
         [SerializeField] private MonoPool<UICharacterView> _pool;
         
@@ -25,7 +21,6 @@ namespace Code.UI
             {
                 UICharacterView view = _pool.GetNext();
                 view.SetActor(actor);
-                view.Enable();
             }
 
             if (rightToLeft)

@@ -6,10 +6,9 @@ namespace Game.Runtime
         Initialize,
         Start,
         StartRound,
-        PlayerTurn,
-        EnemyTurn,
-        EndRound,
+        StartTurn,
+        EndTurn,
         End,
-        Pause
+        Pause,
     }
 }

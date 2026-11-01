@@ -63,7 +63,12 @@ namespace Code.Core
             _enabled.Clear();
         }
 
-        public T GetByIndex(int tabIndex)
+        public T GetEnableByIndex(int tabIndex)
+        {
+            return _enabled[tabIndex];
+        }
+        
+        public T GetAllByIndex(int tabIndex)
         {
             return _all[tabIndex];
         }
