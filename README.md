@@ -1,7 +1,5 @@
 # turn_based_combat
 
-Пошаговый 2D-бой на Unity (C#).
-
 ## Тест
 веб: https://itch.io/game/edit/5286606#published
 
