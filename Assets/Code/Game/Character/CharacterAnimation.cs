@@ -14,31 +14,48 @@ namespace Game.Character
         [SerializeField] private Transform _body;
         [SerializeField] private SpriteRenderer[] _renderers;
 
+        private const float DefaultHeadLocalY = 2.5f;
+        private const float TargetHeadLocalY = 2.2f;
+        private static readonly Vector3 DefaultBodyLocalPosition = Vector3.zero;
+        private static readonly Quaternion DefaultBodyLocalRotation = Quaternion.identity;
+
         private Sequence _sequence;
         
         
         public void PlayIdle()
         {
             _sequence?.Kill();
+            _resetPose();
             _sequence = DOTween.Sequence();
             
-            const float defaultHeadPosition = 2.5f;
-            const float targetHeadPosition = 2.2f;
             const float speed = 4f;
+
             
-            _sequence.Append(_head.DOLocalMoveY(defaultHeadPosition, speed))
-                .SetSpeedBased()
-                .SetEase(Ease.Linear);
-            
-            _sequence.Append(_head.DOLocalMoveY(targetHeadPosition, speed))
-                .SetSpeedBased()
-                .SetEase(Ease.Linear)
-                .SetLoops(-1, LoopType.Yoyo);
+            if (_body != null)
+            {
+                _sequence.Append(_head.DOLocalMoveY(DefaultHeadLocalY, speed))
+                    .SetSpeedBased()
+                    .SetEase(Ease.Linear);
+            }
+
+            if (_head != null)
+            {
+                _sequence.Append(_head.DOLocalMoveY(TargetHeadLocalY, speed))
+                    .SetSpeedBased()
+                    .SetEase(Ease.Linear)
+                    .SetLoops(-1, LoopType.Yoyo);
+            }
         }
 
         public async UniTask PlayDie(CancellationToken token = default)
         {
             _sequence?.Kill();
+            
+            if (_body == null)
+            {
+                return;
+            }
+            
             _sequence = DOTween.Sequence();
             
             foreach (SpriteRenderer renderer in _renderers)
@@ -53,8 +70,14 @@ namespace Game.Character
         public async UniTask PlayUseAbility(CancellationToken token = default)
         {
             _sequence?.Kill();
-            _sequence = DOTween.Sequence();
 
+            if (_body == null)
+            {
+                return;
+            }
+            
+            _sequence = DOTween.Sequence();
+            
             Tween fade = _body.DOLocalMoveY(0.5f, 0.5f).SetLoops(2, LoopType.Yoyo);
             
             _sequence.Append(fade);
@@ -65,6 +88,12 @@ namespace Game.Character
         public async UniTask PlayTakeDamage(CancellationToken token = default)
         {
             _sequence?.Kill();
+           
+            if (_body == null)
+            {
+                return;
+            }
+            
             _sequence = DOTween.Sequence();
             
             _sequence.Append(_body.DOShakeRotation(1, 30));
@@ -90,6 +119,40 @@ namespace Game.Character
             }
 
             _sequence = null;
+            _resetPose();
+        }
+
+        private void _resetPose()
+        {
+            if (_body != null)
+            {
+                _body.localPosition = DefaultBodyLocalPosition;
+                _body.localRotation = DefaultBodyLocalRotation;
+            }
+
+            if (_head != null)
+            {
+                Vector3 headLocalPosition = _head.localPosition;
+                headLocalPosition.y = DefaultHeadLocalY;
+                _head.localPosition = headLocalPosition;
+            }
+
+            if (_renderers == null)
+            {
+                return;
+            }
+
+            foreach (SpriteRenderer renderer in _renderers)
+            {
+                if (renderer == null)
+                {
+                    continue;
+                }
+
+                Color color = renderer.color;
+                color.a = 1f;
+                renderer.color = color;
+            }
         }
 
         private async UniTask _awaitSequence(CancellationToken token)
