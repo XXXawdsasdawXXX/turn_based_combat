@@ -8,6 +8,7 @@ namespace Game.Runtime
 {
     public class BattleState : IDisposable
     {
+        public event Action<ETeamId> GameEnded; 
         public List<CharacterActor> PlayerTeam { get; } = new();
         public List<CharacterActor> EnemyTeam { get; } = new();
      
@@ -47,6 +48,11 @@ namespace Game.Runtime
         public IEnumerable<CharacterActor> GetEnemies()
         {
             return Turn.IsPlayerTurn() ? EnemyTeam : PlayerTeam;
+        }
+
+        public void InvokeEndGame(ETeamId winner)
+        {
+            GameEnded?.Invoke(winner);
         }
 
         public bool IsBattleEnd(out ETeamId winner)

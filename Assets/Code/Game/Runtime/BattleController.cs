@@ -14,7 +14,6 @@ namespace Game.Runtime
     public interface IBattleController
     {
         BattleState State { get; }
-
         void StartBattle();
         void Pause();
         void Resume();
@@ -209,6 +208,8 @@ namespace Game.Runtime
                         Debug.Log($"team is won {winner}");
 
                         State.SetPhase(EBattlePhase.End);
+                        
+                        State.InvokeEndGame(winner);
                         
                         break;
                     }

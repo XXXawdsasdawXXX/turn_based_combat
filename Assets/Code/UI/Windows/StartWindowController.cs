@@ -1,4 +1,5 @@
 using Game.Runtime;
+using VContainer.Unity;
 
 namespace Code.UI
 {
@@ -15,6 +16,12 @@ namespace Code.UI
         {
             _windowNavigator = windowNavigator;
             _battleController = battleController;
+        }
+
+        public override void Start()
+        {
+            base.Start();
+            view.Open();
         }
 
         protected override void onSubscribe()
