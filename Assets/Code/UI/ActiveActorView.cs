@@ -25,10 +25,8 @@ namespace Code.UI
             _state = state;
             
             state.Turn.Actor.DistinctUntilChanged().Subscribe(_setActor);
-            state.Turn.Ability.DistinctUntilChanged().Subscribe(_ =>
-            {
-                _setInteractable(state.Turn.IsPlayerTurn() && state.Turn.Target.CurrentValue == null);
-            });
+            state.Turn.Ability.DistinctUntilChanged().Subscribe(_ => _refreshInteractable());
+            state.IsPaused.DistinctUntilChanged().Subscribe(_ => _refreshInteractable());
             
             SkipButton.onClick.AddListener(_skip);
         }
@@ -64,6 +62,11 @@ namespace Code.UI
                 int index = i;
                 abilityView.Clicked += () =>
                 {
+                    if (_state.IsPaused.CurrentValue)
+                    {
+                        return;
+                    }
+
                     if (_current != null)
                     {
                         _current.SetSelectedState(false);
@@ -76,12 +79,26 @@ namespace Code.UI
                 };
             }
             
-            _setInteractable(actor.State.Team == ETeamId.Player);
+            _refreshInteractable();
         }
 
         private void _skip()
         {
+            if (_state.IsPaused.CurrentValue)
+            {
+                return;
+            }
+
             _state.Turn.SetAbility(Ability.Skip());
+        }
+
+        private void _refreshInteractable()
+        {
+            bool canAct = !_state.IsPaused.CurrentValue
+                          && _state.Turn.IsPlayerTurn()
+                          && _state.Turn.Target.CurrentValue == null;
+
+            _setInteractable(canAct);
         }
 
         private void _setInteractable(bool isInteractable)

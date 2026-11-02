@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using Cysharp.Threading.Tasks;
 using DG.Tweening;
 using UnityEngine;
@@ -33,11 +34,9 @@ namespace Game.Character
                 .SetSpeedBased()
                 .SetEase(Ease.Linear)
                 .SetLoops(-1, LoopType.Yoyo);
-            
-            _sequence.ToUniTask();
         }
 
-        public async UniTask PlayDie()
+        public async UniTask PlayDie(CancellationToken token = default)
         {
             _sequence?.Kill();
             _sequence = DOTween.Sequence();
@@ -48,10 +47,10 @@ namespace Game.Character
                 _sequence.Join(fade);
             }
             
-            await _sequence.ToUniTask();
+            await _awaitSequence(token);
         }
 
-        public async UniTask PlayUseAbility()
+        public async UniTask PlayUseAbility(CancellationToken token = default)
         {
             _sequence?.Kill();
             _sequence = DOTween.Sequence();
@@ -60,22 +59,50 @@ namespace Game.Character
             
             _sequence.Append(fade);
 
-            await _sequence.ToUniTask();
+            await _awaitSequence(token);
         }
 
-        public async UniTask PlayTakeDamage()
+        public async UniTask PlayTakeDamage(CancellationToken token = default)
         {
             _sequence?.Kill();
             _sequence = DOTween.Sequence();
             
-            await _sequence.Append(_body.DOShakeRotation(1, 30));
+            _sequence.Append(_body.DOShakeRotation(1, 30));
 
-            await _sequence.ToUniTask();
+            await _awaitSequence(token);
+        }
+
+        public void Pause()
+        {
+            _sequence?.Pause();
+        }
+
+        public void Resume()
+        {
+            _sequence?.Play();
         }
 
         public void Dispose()
         {
-            _sequence?.Kill();
+            if (_sequence != null && _sequence.IsActive())
+            {
+                _sequence.Kill();
+            }
+
+            _sequence = null;
+        }
+
+        private async UniTask _awaitSequence(CancellationToken token)
+        {
+            try
+            {
+                await _sequence.ToUniTask(TweenCancelBehaviour.CancelAwait, token);
+            }
+            catch (OperationCanceledException)
+            {
+                Dispose();
+                throw;
+            }
         }
     }
 }

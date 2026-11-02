@@ -15,7 +15,7 @@ namespace Game.Runtime
             while (state.Turn.Target.CurrentValue == null)
             {
                 await UniTask.WaitUntil(
-                    () => state.Turn.Ability.CurrentValue != null,
+                    () => !state.IsPaused.CurrentValue && state.Turn.Ability.CurrentValue != null,
                     cancellationToken: token);
 
                 Ability chosen = state.Turn.Ability.CurrentValue;
@@ -28,8 +28,9 @@ namespace Game.Runtime
                 state.SyncChoiceTargetMode();
 
                 await UniTask.WaitUntil(
-                    () => state.Turn.Target.CurrentValue != null
-                          || state.Turn.Ability.CurrentValue != chosen,
+                    () => !state.IsPaused.CurrentValue
+                          && (state.Turn.Target.CurrentValue != null
+                              || state.Turn.Ability.CurrentValue != chosen),
                     cancellationToken: token);
             }
 

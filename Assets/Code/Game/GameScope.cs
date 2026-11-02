@@ -1,4 +1,3 @@
-using Game.Character;
 using Game.Configurations;
 using UnityEngine;
 using VContainer;
@@ -16,7 +15,7 @@ namespace Game.Runtime
             builder.RegisterInstance(_teamsConfiguration).AsSelf();
             builder.RegisterInstance(_assetStorage).AsSelf();
 
-            builder.Register<ICharacterFactory, CharacterFactory>(Lifetime.Singleton);
+            builder.Register<CharacterFactory>(Lifetime.Singleton).AsImplementedInterfaces();
             builder.Register<BattleController>(Lifetime.Singleton).AsImplementedInterfaces();
             
             base.Configure(builder);

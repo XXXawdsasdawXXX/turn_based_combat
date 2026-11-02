@@ -59,8 +59,6 @@ namespace Code.UI
                     break;
                 case EBattlePhase.End:
                     break;
-                case EBattlePhase.Pause:
-                    break;
             }
         }
     }

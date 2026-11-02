@@ -15,6 +15,12 @@ namespace Code.Core
         [SerializeField] private List<T> _all = new();
         [SerializeField] private List<T> _enabled = new();
 
+        
+        public void Initialize(T prefab, Transform root)
+        {
+            _prefab = prefab;
+            _root = root;
+        }
 
         public T GetNext()
         {

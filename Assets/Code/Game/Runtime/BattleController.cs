@@ -15,7 +15,11 @@ namespace Game.Runtime
     {
         BattleState State { get; }
 
-        public void StartBattle();
+        void StartBattle();
+        void Pause();
+        void Resume();
+        void Restart();
+        void Exit();
     }
 
     public sealed class BattleController : IBattleController, IStartable, IDisposable
@@ -26,8 +30,11 @@ namespace Game.Runtime
         private readonly TeamsConfiguration _teamsConfiguration;
         private readonly ITurnDecider _playerDecider = new PlayerTurnDecider();
         private readonly ITurnDecider _enemyDecider = new EnemyTurnDecider();
+        private readonly List<IDisposable> _actorSubscriptions = new();
 
         private CancellationTokenSource _cts;
+        private UniTask _battleTask;
+        private bool _isStopping;
 
 
         public BattleController(ICharacterFactory characterFactory, TeamsConfiguration teamsConfiguration)
@@ -38,12 +45,15 @@ namespace Game.Runtime
 
         public void Start()
         {
-            _cts = new CancellationTokenSource();
+            _resetCts();
         }
         
         public void Dispose()
         {
+            _cts?.Cancel();
             _cts?.Dispose();
+            _cts = null;
+            _teardownActors();
             State.Dispose();
         }
 
@@ -52,6 +62,11 @@ namespace Game.Runtime
             if (State.Phase.CurrentValue is not EBattlePhase.NotStarted)
             {
                 return;
+            }
+
+            if (_cts == null || _cts.IsCancellationRequested)
+            {
+                _resetCts();
             }
 
             State.RoundActorsQueue.Clear();
@@ -66,7 +81,94 @@ namespace Game.Runtime
 
             State.SetPhase(EBattlePhase.Start);
 
-            _runBattle(_cts.Token).Forget();
+            _battleTask = _runBattle(_cts.Token);
+        }
+
+        public void Pause()
+        {
+            if (State.IsPaused.CurrentValue)
+            {
+                return;
+            }
+
+            if (State.Phase.CurrentValue is EBattlePhase.NotStarted)
+            {
+                return;
+            }
+
+            State.SetPaused(true);
+            State.DisableChoiceTargetMode();
+            
+            _foreachActor(actor => actor.WorldView.Animation.Pause());
+        }
+
+        public void Resume()
+        {
+            if (!State.IsPaused.CurrentValue)
+            {
+                return;
+            }
+
+            _foreachActor(actor => actor.WorldView.Animation.Resume());
+            
+            State.SetPaused(false);
+            _restoreTargetingIfNeeded();
+        }
+
+        public void Restart()
+        {
+            _restartAsync().Forget();
+        }
+
+        public void Exit()
+        {
+            _exitAsync().Forget();
+        }
+
+        private async UniTaskVoid _restartAsync()
+        {
+            await _endSessionAsync();
+            StartBattle();
+        }
+
+        private async UniTaskVoid _exitAsync()
+        {
+            await _endSessionAsync();
+        }
+
+        private async UniTask _endSessionAsync()
+        {
+            if (_isStopping)
+            {
+                return;
+            }
+
+            _isStopping = true;
+
+            try
+            {
+                State.SetPaused(false);
+
+                if (_cts is { IsCancellationRequested: false })
+                {
+                    _cts.Cancel();
+                }
+
+                try
+                {
+                    await _battleTask;
+                }
+                catch (OperationCanceledException)
+                {
+                }
+
+                _teardownBattle();
+                _resetCts();
+            }
+            finally
+            {
+                _isStopping = false;
+            }
         }
 
         private async UniTask _runBattle(CancellationToken token)
@@ -85,7 +187,6 @@ namespace Game.Runtime
             }
             catch (OperationCanceledException)
             {
-                // restart/exit later
             }
         }
 
@@ -130,13 +231,13 @@ namespace Game.Runtime
                 : _enemyDecider;
 
             TurnChoice choice = await decider.DecideAsync(actor, State, token);
-            await _executeChoice(actor, choice);
+            await _executeChoice(actor, choice, token);
 
             State.Turn.ResetState();
             State.SetPhase(EBattlePhase.EndTurn);
         }
 
-        private async UniTask _executeChoice(CharacterActor actor, TurnChoice choice)
+        private async UniTask _executeChoice(CharacterActor actor, TurnChoice choice, CancellationToken token)
         {
             if (choice.Target == null || choice.Ability.Type is EAbilityType.Skip)
             {
@@ -144,18 +245,83 @@ namespace Game.Runtime
                 return;
             }
 
-            State.DisableChoiceTargetMode(keepTargetHighlight: choice.Target);
-            choice.Target.State.ForceTargetState(true);
+            CharacterActor target = choice.Target;
 
-            ActionOutcome outcome = ActionResolver.Resolve(
-                actor,
-                choice.Ability,
-                choice.Target,
-                State.GetAllies());
+            try
+            {
+                State.DisableChoiceTargetMode(keepTargetHighlight: target);
+                target.State.ForceTargetState(true);
 
-            await ActionRunner.StartAction(actor, outcome);
+                ActionOutcome outcome = ActionResolver.Resolve(
+                    actor,
+                    choice.Ability,
+                    target,
+                    State.GetAllies());
 
-            choice.Target.State.ForceTargetState(false);
+                await ActionRunner.StartAction(actor, outcome, token);
+            }
+            finally
+            {
+                target.State.ForceTargetState(false);
+                State.DisableChoiceTargetMode();
+            }
+        }
+
+        private void _teardownBattle()
+        {
+            State.DisableChoiceTargetMode();
+            // Turn still holds the active actor — clear it before disposing CharacterState.
+            State.Turn.ResetState();
+            _teardownActors();
+            State.PlayerTeam.Clear();
+            State.EnemyTeam.Clear();
+            State.ResetState();
+        }
+
+        private void _teardownActors()
+        {
+            foreach (IDisposable subscription in _actorSubscriptions)
+            {
+                subscription?.Dispose();
+            }
+
+            _actorSubscriptions.Clear();
+
+            _characterFactory.ReleaseAll();
+        }
+
+        private void _resetCts()
+        {
+            _cts?.Dispose();
+            _cts = new CancellationTokenSource();
+        }
+
+        private void _restoreTargetingIfNeeded()
+        {
+            Ability ability = State.Turn.Ability.CurrentValue;
+
+            if (!State.Turn.IsPlayerTurn()
+                || ability == null
+                || ability.Type is EAbilityType.Skip
+                || State.Turn.Target.CurrentValue != null)
+            {
+                return;
+            }
+
+            State.SyncChoiceTargetMode();
+        }
+
+        private void _foreachActor(Action<CharacterActor> action)
+        {
+            foreach (CharacterActor actor in State.PlayerTeam)
+            {
+                action(actor);
+            }
+
+            foreach (CharacterActor actor in State.EnemyTeam)
+            {
+                action(actor);
+            }
         }
 
         private void _createTeam(
@@ -190,7 +356,7 @@ namespace Game.Runtime
                 actors.Add(actor);
                 actor.WorldView.SetPosition(new Vector3(x, Y, 0), team);
 
-                actor.State.IsTarget.DistinctUntilChanged().Subscribe(isTarget =>
+                _actorSubscriptions.Add(actor.State.IsTarget.DistinctUntilChanged().Subscribe(isTarget =>
                 {
                     if (isTarget)
                     {
@@ -206,7 +372,7 @@ namespace Game.Runtime
                     {
                         State.Turn.SetTarget(null);
                     }
-                });
+                }));
             }
         }
     }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Code.Core;
 using R3;
 using UnityEngine;
 
@@ -10,7 +11,7 @@ using TriInspector;
 
 namespace Game.Character
 {
-    public class CharacterWorldView : MonoBehaviour
+    public class CharacterWorldView : MonoBehaviour, IPoolEntity
     {
         [field: SerializeField] public CharacterAnimation Animation { get; private set; }
         
@@ -26,16 +27,22 @@ namespace Game.Character
         private CharacterState _state;
 
         
-        private void OnEnable()
+        public void Enable()
         {
+            _turnMarker.SetActive(false);
+            _targetMarker.SetActive(false);
+            _observedMarker.SetActive(false);
+            gameObject.SetActive(true);
             Animation.PlayIdle();
         }
 
-        private void OnDisable()
+        public void Disable()
         {
+            Animation.Dispose();
             _dispose();
+            gameObject.SetActive(false);
         }
-
+        
         private void OnMouseEnter()
         {
             _state?.SetObservedState(true);
@@ -145,19 +152,7 @@ namespace Game.Character
             {
                 return;
             }
-            
-            /*GUIStyle labelStyle = new()
-            {
-                alignment = TextAnchor.MiddleCenter,
-                font = _font,
-                fontSize = 15,
-                fontStyle = FontStyle.Italic,
-                normal = { textColor = _gizmoColor },
-            };
-            
-            
-            Handles.Label(transform.position + Vector3.up, $"name: {_gizmoModel.Name}\nslot: {_gizmoModel.Slot}", labelStyle);*/
-
+         
             string text = $"name: {_gizmoModel.Name}\nslot: {_gizmoModel.Slot}";
             Handles.color = _gizmoColor;
             Handles.Label(transform.position + Vector3.up * 0.5f, text);

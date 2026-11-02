@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+using System.Threading;
 using Cysharp.Threading.Tasks;
 using Game.Character;
 using Game.Stats;
@@ -7,22 +7,23 @@ namespace Game.Runtime
 {
     public static class ActionRunner
     {
-        public static async UniTask StartAction(CharacterActor actor, ActionOutcome outcome)
+        public static async UniTask StartAction(
+            CharacterActor actor,
+            ActionOutcome outcome,
+            CancellationToken token)
         {
             if (outcome.Kind is EActionOutcomeKind.Skip)
             {
                 return;
             }
             
-            await actor.WorldView.Animation.PlayUseAbility();
+            await actor.WorldView.Animation.PlayUseAbility(token);
             actor.WorldView.Animation.PlayIdle();
             
             if (outcome.Kind is EActionOutcomeKind.Miss)
             {
                 return;
             }
-            
-            List<UniTask> _impacts = new();
 
             if (outcome.Target.State.Stats.TryGetValue(outcome.StatType, out RuntimeStat targetStat))
             {
@@ -31,7 +32,7 @@ namespace Game.Runtime
             
             if (outcome.Kind is EActionOutcomeKind.Hit)
             {
-                await outcome.Target.WorldView.Animation.PlayTakeDamage();
+                await outcome.Target.WorldView.Animation.PlayTakeDamage(token);
 
                 if (outcome.Target.State.IsAlive())
                 {
@@ -39,7 +40,7 @@ namespace Game.Runtime
                 }
                 else
                 {
-                    await outcome.Target.WorldView.Animation.PlayDie();
+                    await outcome.Target.WorldView.Animation.PlayDie(token);
                 }
             }
         }

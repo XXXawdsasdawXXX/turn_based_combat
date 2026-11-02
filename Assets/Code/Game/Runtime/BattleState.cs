@@ -16,6 +16,9 @@ namespace Game.Runtime
         
         public ReadOnlyReactiveProperty<EBattlePhase> Phase => _phase;
         private readonly ReactiveProperty<EBattlePhase> _phase = new(EBattlePhase.NotStarted);
+
+        public ReadOnlyReactiveProperty<bool> IsPaused => _isPaused;
+        private readonly ReactiveProperty<bool> _isPaused = new(false);
         
         public RoundQueue RoundActorsQueue { get; } = new();
         public TurnState Turn {get; } = new();
@@ -24,6 +27,11 @@ namespace Game.Runtime
         public void SetPhase(EBattlePhase phase)
         {
             _phase.Value = phase;
+        }
+
+        public void SetPaused(bool isPaused)
+        {
+            _isPaused.Value = isPaused;
         }
 
         public void NextRound()
@@ -102,6 +110,7 @@ namespace Game.Runtime
             Turn.ResetState();            
             RoundActorsQueue.Clear();
             
+            _isPaused.Value = false;
             _phase.Value = EBattlePhase.NotStarted;
             _round.Value = 0;
         }
@@ -111,6 +120,7 @@ namespace Game.Runtime
         {
             _phase.Dispose();
             _round.Dispose();
+            _isPaused.Dispose();
         }
 
 

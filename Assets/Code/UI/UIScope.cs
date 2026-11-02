@@ -1,5 +1,3 @@
-using TriInspector;
-using UnityEditor;
 using UnityEngine;
 using VContainer;
 using VContainer.Unity;
@@ -21,6 +19,7 @@ namespace Code.UI
             
             builder.Register<StartWindowController>(Lifetime.Singleton).AsImplementedInterfaces();
             builder.Register<BattleWindowController>(Lifetime.Singleton).AsImplementedInterfaces();
+            builder.Register<PauseWindowController>(Lifetime.Singleton).AsImplementedInterfaces();
         }
     }
 }
