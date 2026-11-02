@@ -24,6 +24,9 @@ namespace Game.Runtime
         public RoundQueue RoundActorsQueue { get; } = new();
         public TurnState Turn {get; } = new();
 
+        private readonly Subject<CombatLogEntry> _combatLog = new();
+        public Observable<CombatLogEntry> CombatLog => _combatLog;
+
         
         public void SetPhase(EBattlePhase phase)
         {
@@ -53,6 +56,11 @@ namespace Game.Runtime
         public void InvokeEndGame(ETeamId winner)
         {
             GameEnded?.Invoke(winner);
+        }
+
+        public void PublishCombatLog(CombatLogEntry entry)
+        {
+            _combatLog.OnNext(entry);
         }
 
         public bool IsBattleEnd(out ETeamId winner)
@@ -127,6 +135,7 @@ namespace Game.Runtime
             _phase.Dispose();
             _round.Dispose();
             _isPaused.Dispose();
+            _combatLog.Dispose();
         }
 
 

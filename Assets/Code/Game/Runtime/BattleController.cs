@@ -259,6 +259,14 @@ namespace Game.Runtime
                     target,
                     State.GetAllies());
 
+                State.PublishCombatLog(new CombatLogEntry(
+                    State.Round.CurrentValue,
+                    actor.Configuration.Name,
+                    target.Configuration.Name,
+                    choice.Ability.Type,
+                    outcome.Kind,
+                    outcome.StatDelta));
+
                 await ActionRunner.StartAction(actor, outcome, token);
             }
             finally

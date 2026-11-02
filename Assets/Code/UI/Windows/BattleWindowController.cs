@@ -20,12 +20,15 @@ namespace Code.UI
         protected override void onSubscribe()
         {
             BattleState state = _battleController.State;
+
+            view.EnsureCombatLog();
             
             view.RoundQueue.SubscribeToBattleState(_battleController.State);
             view.ActiveActor.SubscribeToBattleState(_battleController.State);
             
             _subscription.Add(state.Phase.DistinctUntilChanged().Subscribe(_onPhaseChanged));
             _subscription.Add(state.Round.DistinctUntilChanged().Subscribe(view.UpdateRoundNumber));
+            _subscription.Add(state.CombatLog.Subscribe(view.CombatLog.Append));
         }
 
         protected override void onDispose()
@@ -52,6 +55,7 @@ namespace Code.UI
                 case EBattlePhase.Initialize:
                     break;
                 case EBattlePhase.Start:
+                    view.CombatLog?.Clear();
                     view.PlayerTeam.SetTeam(state.PlayerTeam, rightToLeft: true);
                     view.EnemyTeam.SetTeam(state.EnemyTeam);
                     break;
