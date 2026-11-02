@@ -28,12 +28,12 @@ MonoBehaviour:
     <Type>k__BackingField: 1
     <Effect>k__BackingField:
       <Type>k__BackingField: 1
-      <BaseValue>k__BackingField: -4
+      <BaseValue>k__BackingField: -6
   - <Name>k__BackingField: range attack
     <Type>k__BackingField: 2
     <Effect>k__BackingField:
       <Type>k__BackingField: 1
-      <BaseValue>k__BackingField: -3
+      <BaseValue>k__BackingField: -5
   - <Name>k__BackingField: heal
     <Type>k__BackingField: 3
     <Effect>k__BackingField:
