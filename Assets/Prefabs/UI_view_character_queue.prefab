@@ -54,7 +54,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3975255247063948174, guid: aa72cbebba46f51db98e50124e9bcdd4, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -9719.999
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3975255247063948174, guid: aa72cbebba46f51db98e50124e9bcdd4, type: 3}
       propertyPath: m_LocalRotation.w
@@ -98,7 +98,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6923631498681580519, guid: aa72cbebba46f51db98e50124e9bcdd4, type: 3}
       propertyPath: m_Name
-      value: UI_view_character Variant
+      value: UI_view_character_queue
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

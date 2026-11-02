@@ -20,7 +20,7 @@ namespace Code.UI
             builder.Register<StartWindowController>(Lifetime.Singleton).AsImplementedInterfaces();
             builder.Register<BattleWindowController>(Lifetime.Singleton).AsImplementedInterfaces();
             builder.Register<PauseWindowController>(Lifetime.Singleton).AsImplementedInterfaces();
-            builder.Register<EndGameWindowView>(Lifetime.Singleton).AsImplementedInterfaces();
+            builder.Register<EndGameWindowController>(Lifetime.Singleton).AsImplementedInterfaces();
         }
     }
 }
