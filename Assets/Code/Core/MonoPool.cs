@@ -63,6 +63,12 @@ namespace Code.Core
         {
             foreach (T entity in _all)
             {
+                // Unity fake-null: skip already destroyed objects (e.g. play mode exit).
+                if (entity == null)
+                {
+                    continue;
+                }
+
                 entity.Disable();
             }
 
